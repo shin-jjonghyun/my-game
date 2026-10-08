@@ -1,0 +1,188 @@
+:root {
+  color-scheme: dark;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --background: #111315;
+  --surface: #1b1f21;
+  --text: #f2f3ee;
+  --muted: #a6ada8;
+  --accent: #b9e4a2;
+  --line: #343a38;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(185 228 162 / 8%), transparent 42rem),
+    var(--background);
+  color: var(--text);
+}
+
+.profile {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  width: min(100% - 3rem, 48rem);
+  margin-inline: auto;
+  padding-block: clamp(5rem, 18vh, 10rem) 5rem;
+}
+
+.intro {
+  padding-bottom: 3.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+h1 {
+  margin: 0;
+  color: #ffd84d;
+  font-size: clamp(3.25rem, 10vw, 6.5rem);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.tagline {
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 1.2rem;
+  line-height: 1.7;
+}
+
+.favorites {
+  padding-top: 2.5rem;
+}
+
+.ideas {
+  padding-top: 2.5rem;
+}
+
+.idea-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.idea-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.idea-field {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.idea-field:last-child {
+  border-bottom: 0;
+}
+
+.idea-field h3 {
+  margin: 0 0 0.45rem;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.idea-field p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.page-footer {
+  margin-top: auto;
+  padding-top: 2rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+h2 {
+  margin: 0 0 1.25rem;
+  font-size: 1.5rem;
+}
+
+.game-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game-list li {
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.game-list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.game-list .monster-hunter {
+  color: #ffd84d;
+}
+
+.game-list .devil-may-cry {
+  color: #ff6b6b;
+}
+
+.game-list .honkai {
+  color: #7dd3fc;
+}
+
+.game-list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.game-list li span {
+  display: inline-block;
+  transition: transform 160ms ease;
+  transform-origin: left center;
+}
+
+.game-list li:hover span {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-list li span {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile {
+    width: min(100% - 2rem, 48rem);
+    padding-top: 4.5rem;
+  }
+
+  .intro {
+    padding-bottom: 2.5rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .idea-list {
+    grid-template-columns: 1fr;
+  }
+}
