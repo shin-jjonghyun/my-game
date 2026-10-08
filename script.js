@@ -14,9 +14,9 @@ if (todayDate) {
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
   todayDate.dateTime = localDate;
-  todayDate.textContent = new Intl.DateTimeFormat("ko-KR", {
+  todayDate.textContent = `현재 날짜: ${new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
-  }).format(now);
+  }).format(now)}`;
 }
