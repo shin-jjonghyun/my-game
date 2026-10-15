@@ -61,6 +61,21 @@ ctx.fillText("추가 힌트: 2", 730, 55);
 const suspectCenters = [230, 370, 510, 650];
 for (let i = 0; i < suspectCenters.length; i += 1) {
   const centerX = suspectCenters[i];
+  const bubbleX = centerX - 65;
+  const bubbleY = 145;
+
+  // 용의자 머리 위에 130x100 크기의 흰색 둥근 말풍선 상자를 그린다.
+  ctx.beginPath();
+  ctx.roundRect(bubbleX, bubbleY, 130, 100, 10);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+
+  // 말풍선 가운데에 용의자 정보 문구를 쓴다.
+  ctx.fillStyle = "#24202b";
+  ctx.font = "16px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("용의자 정보", centerX, bubbleY + 50);
 
   // 용의자의 머리를 원으로 그린다.
   ctx.fillStyle = "#e7bd99";
