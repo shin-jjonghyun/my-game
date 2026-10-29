@@ -6,6 +6,15 @@ const clickRippleMaxRadius = 30;
 const clickRippleSpeed = 0.25;
 const clickRipples = [];
 
+// 힌트 패널의 접힌 폭, 펼친 폭(접힌 폭의 두 배), 애니메이션 속도를 설정한다.
+const hintPanelX = 20;
+const hintPanelY = 20;
+const hintPanelCollapsedWidth = 100;
+const hintPanelExpandedWidth = hintPanelCollapsedWidth * 2;
+const hintPanelExpandSpeed = 0.6;
+let hintPanelWidth = hintPanelCollapsedWidth;
+let isHintPanelExpanded = false;
+
 // 달과 별의 위치, 크기, 이동 속도를 한곳에서 관리한다.
 const skyHeight = 450;
 const moon = {
@@ -27,6 +36,60 @@ const stars = [
   { x: 530, y: 250, radius: 1, speed: 0.5 },
   { x: 760, y: 350, radius: 2, speed: 0.35 },
 ];
+// 게임에서 사용할 동기, 장소, 물건 종류를 관리한다.
+const motiveTypes = [
+  "복수",
+  "금전 문제",
+  "질투",
+  "비밀 은폐",
+  "권력욕",
+  "오랜 원한",
+  "협박",
+  "상속 다툼",
+  "배신감",
+  "명예 훼손",
+];
+const locationTypes = [
+  "서재",
+  "도서관",
+  "정원",
+  "주방",
+  "창고",
+  "연구실",
+  "온실",
+  "지하실",
+  "복도",
+  "응접실",
+  "옥상",
+  "차고",
+  "작업실",
+  "별관",
+  "음악실",
+];
+const itemTypes = [
+  "촛대",
+  "편지칼",
+  "독약",
+  "밧줄",
+  "망치",
+  "권총",
+  "약병",
+  "장식품",
+  "와인잔",
+  "가위",
+  "드라이버",
+  "열쇠",
+  "향수병",
+  "트로피",
+  "책",
+];
+const suspects = [
+  { x: 270, color: "#5b83a6", motive: "", location: "", item: "" },
+  { x: 410, color: "#a65b5b", motive: "", location: "", item: "" },
+  { x: 550, color: "#6b8c65", motive: "", location: "", item: "" },
+  { x: 690, color: "#8a6b9b", motive: "", location: "", item: "" },
+];
+
 // 각 버튼의 원래 위치와 크기, 확대 속도와 애니메이션 시간을 저장한다.
 const buttonHoverScale = 1.1;
 const buttons = [
@@ -59,6 +122,31 @@ const buttons = [
 ];
 let previousFrameTime = 0;
 
+// 목록을 무작위로 섞고, 중복 없이 각 용의자에게 속성을 배정한다.
+function shuffle(items) {
+  const shuffledItems = [...items];
+  for (let i = shuffledItems.length - 1; i > 0; i -= 1) {
+    const randomIndex = Math.floor(Math.random() * (i + 1));
+    [shuffledItems[i], shuffledItems[randomIndex]] = [
+      shuffledItems[randomIndex],
+      shuffledItems[i],
+    ];
+  }
+  return shuffledItems;
+}
+
+function initializeGame() {
+  const shuffledMotives = shuffle(motiveTypes);
+  const shuffledLocations = shuffle(locationTypes);
+  const shuffledItems = shuffle(itemTypes);
+
+  for (let i = 0; i < suspects.length; i += 1) {
+    suspects[i].motive = shuffledMotives[i];
+    suspects[i].location = shuffledLocations[i];
+    suspects[i].item = shuffledItems[i];
+  }
+}
+
 // 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
 canvas.addEventListener("click", (event) => {
   if (event.button !== 0) {
@@ -66,11 +154,24 @@ canvas.addEventListener("click", (event) => {
   }
 
   const rect = canvas.getBoundingClientRect();
+  const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
+  const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
   clickRipples.push({
-    x: (event.clientX - rect.left) * (canvas.width / rect.width),
-    y: (event.clientY - rect.top) * (canvas.height / rect.height),
+    x: mouseX,
+    y: mouseY,
     radius: 0,
   });
+
+  // 패널 오른쪽 가장자리의 화살표 버튼을 누르면 펼침 상태를 전환한다.
+  const toggleButtonX = hintPanelX + hintPanelWidth;
+  const toggleButtonY = hintPanelY + 225;
+  const toggleButtonRadius = 14;
+  const distanceX = mouseX - toggleButtonX;
+  const distanceY = mouseY - toggleButtonY;
+  if (distanceX ** 2 + distanceY ** 2 <= toggleButtonRadius ** 2) {
+    isHintPanelExpanded = !isHintPanelExpanded;
+  }
 });
 
 // 마우스 위치를 캔버스 좌표로 바꾸고 확대된 버튼 영역까지 확인한다.
@@ -118,15 +219,15 @@ function drawBackground() {
   }
 }
 
-function drawGameUI() {
+function drawHintPanel() {
   // 힌트 목록의 배경 상자와 제목을 그린다.
   ctx.fillStyle = "#f3ead5";
-  ctx.fillRect(20, 20, 100, 450);
+  ctx.fillRect(hintPanelX, hintPanelY, hintPanelWidth, 450);
   ctx.fillStyle = "#29232d";
   ctx.font = "bold 14px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("힌트 목록", 70, 34);
+  ctx.fillText("힌트 목록", hintPanelX + hintPanelWidth / 2, 34);
 
   // 장소, 도구, 동기 항목을 세로로 배치한다.
   const hints = ["장소", "도구", "동기"];
@@ -134,21 +235,38 @@ function drawGameUI() {
     const boxY = 55 + i * 70;
 
     ctx.fillStyle = "#fffaf0";
-    ctx.fillRect(25, boxY, 90, 50);
+    ctx.fillRect(25, boxY, hintPanelWidth - 10, 50);
     ctx.strokeStyle = "#b7aa91";
     ctx.lineWidth = 1;
-    ctx.strokeRect(25, boxY, 90, 50);
+    ctx.strokeRect(25, boxY, hintPanelWidth - 10, 50);
 
     ctx.fillStyle = "#29232d";
     ctx.font = "16px sans-serif";
-    ctx.fillText(hints[i], 70, boxY + 25);
+    ctx.fillText(hints[i], hintPanelX + hintPanelWidth / 2, boxY + 25);
   }
 
   // 힌트 목록의 스크롤 바를 그린다.
+  const scrollbarX = hintPanelX + hintPanelWidth - 8;
   ctx.fillStyle = "#d6cbb7";
-  ctx.fillRect(112, 55, 4, 400);
+  ctx.fillRect(scrollbarX, 55, 4, 400);
   ctx.fillStyle = "#8c806e";
-  ctx.fillRect(112, 55, 4, 95);
+  ctx.fillRect(scrollbarX, 55, 4, 95);
+
+  // 화살표 버튼을 패널의 현재 오른쪽 가장자리 중앙에 그린다.
+  const toggleButtonX = hintPanelX + hintPanelWidth;
+  const toggleButtonY = hintPanelY + 225;
+  ctx.beginPath();
+  ctx.arc(toggleButtonX, toggleButtonY, 14, 0, Math.PI * 2);
+  ctx.fillStyle = "#8c806e";
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 18px sans-serif";
+  ctx.fillText(isHintPanelExpanded ? "<" : ">", toggleButtonX, toggleButtonY);
+}
+
+function drawGameUI() {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
 
   // 남은 기회와 추가 힌트를 표시한다.
   ctx.fillStyle = "#fff";
@@ -162,12 +280,11 @@ function drawGameUI() {
   ctx.font = "13px sans-serif";
   ctx.fillText("남은 기회: 2", 400, 55);
   ctx.fillText("추가 힌트: 2", 730, 55);
-
   // 네 명의 용의자 정보 상자와 인물을 그린다.
-  const suspectCenters = [230, 370, 510, 650];
-  const suspectColors = ["#5b83a6", "#a65b5b", "#6b8c65", "#8a6b9b"];
-  for (let i = 0; i < suspectCenters.length; i += 1) {
-    const centerX = suspectCenters[i];
+  // 네 명의 용의자 정보 상자와 인물을 그린다.
+  for (let i = 0; i < suspects.length; i += 1) {
+    const suspect = suspects[i];
+    const centerX = suspect.x;
     const bubbleX = centerX - 65;
     const bubbleY = 145;
 
@@ -176,14 +293,18 @@ function drawGameUI() {
     ctx.fillStyle = "#fff";
     ctx.fill();
     ctx.fillStyle = "#24202b";
-    ctx.font = "16px sans-serif";
-    ctx.fillText("용의자 정보", centerX, bubbleY + 50);
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillText(`용의자 ${i + 1}`, centerX, bubbleY + 14);
+    ctx.font = "11px sans-serif";
+    ctx.fillText(`동기: ${suspect.motive}`, centerX, bubbleY + 39);
+    ctx.fillText(`장소: ${suspect.location}`, centerX, bubbleY + 59);
+    ctx.fillText(`물건: ${suspect.item}`, centerX, bubbleY + 79);
 
     ctx.fillStyle = "#e7bd99";
     ctx.beginPath();
     ctx.arc(centerX, 270, 25, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = suspectColors[i];
+    ctx.fillStyle = suspect.color;
     ctx.fillRect(centerX - 15, 300, 30, 50);
   }
 
@@ -277,6 +398,23 @@ function gameLoop(frameTime) {
     }
   }
 
+  // 패널 폭을 목표 폭까지 일정한 속도로 부드럽게 이동시킨다.
+  const targetHintPanelWidth = isHintPanelExpanded
+    ? hintPanelExpandedWidth
+    : hintPanelCollapsedWidth;
+  const panelWidthChange = hintPanelExpandSpeed * deltaTime;
+  if (hintPanelWidth < targetHintPanelWidth) {
+    hintPanelWidth = Math.min(
+      hintPanelWidth + panelWidthChange,
+      targetHintPanelWidth,
+    );
+  } else if (hintPanelWidth > targetHintPanelWidth) {
+    hintPanelWidth = Math.max(
+      hintPanelWidth - panelWidthChange,
+      targetHintPanelWidth,
+    );
+  }
+
   // 설정한 속도로 원을 키우고, 최대 반지름에 도달한 효과는 제거한다.
   for (let i = clickRipples.length - 1; i >= 0; i -= 1) {
     clickRipples[i].radius += clickRippleSpeed * deltaTime;
@@ -285,12 +423,14 @@ function gameLoop(frameTime) {
     }
   }
 
-  // 그리기: 배경을 먼저, UI와 게임 오브젝트를 나중에 그린다.
+  // 배경과 다른 UI를 그린 뒤 힌트 패널을 마지막에 그려 항상 위에 표시한다.
   drawBackground();
   drawGameUI();
   drawClickRipples();
+  drawHintPanel();
 
   requestAnimationFrame(gameLoop);
 }
 
+initializeGame();
 gameLoop();
