@@ -84,10 +84,10 @@ const itemTypes = [
   "책",
 ];
 const suspects = [
-  { x: 270, color: "#5b83a6", motive: "", location: "", item: "" },
-  { x: 410, color: "#a65b5b", motive: "", location: "", item: "" },
-  { x: 550, color: "#6b8c65", motive: "", location: "", item: "" },
-  { x: 690, color: "#8a6b9b", motive: "", location: "", item: "" },
+  { x: 270, color: "#5b83a6", motive: "", location: "", item: "", isHovered: false },
+  { x: 410, color: "#a65b5b", motive: "", location: "", item: "", isHovered: false },
+  { x: 550, color: "#6b8c65", motive: "", location: "", item: "", isHovered: false },
+  { x: 690, color: "#8a6b9b", motive: "", location: "", item: "", isHovered: false },
 ];
 let culpritSuspect = null;
 let hintClues = [];
@@ -152,51 +152,51 @@ const adjectiveWords = [
   { word: "불길한", category: "extra", value: "" },
 ];
 const nounWords = [
-  { word: "앙갚음", category: "motive", value: "복수" },
-  { word: "빚", category: "motive", value: "금전 문제" },
-  { word: "시샘", category: "motive", value: "질투" },
-  { word: "은폐", category: "motive", value: "비밀 은폐" },
-  { word: "야망", category: "motive", value: "권력욕" },
-  { word: "앙금", category: "motive", value: "오랜 원한" },
-  { word: "압박", category: "motive", value: "협박" },
-  { word: "유산", category: "motive", value: "상속 다툼" },
-  { word: "기만", category: "motive", value: "배신감" },
-  { word: "모욕", category: "motive", value: "명예 훼손" },
-  { word: "책장", category: "location", value: "서재" },
-  { word: "열람석", category: "location", value: "도서관" },
-  { word: "화단", category: "location", value: "정원" },
-  { word: "조리대", category: "location", value: "주방" },
-  { word: "선반", category: "location", value: "창고" },
-  { word: "실험대", category: "location", value: "연구실" },
-  { word: "화분", category: "location", value: "온실" },
-  { word: "계단", category: "location", value: "지하실" },
-  { word: "통로", category: "location", value: "복도" },
-  { word: "소파", category: "location", value: "응접실" },
-  { word: "난간", category: "location", value: "옥상" },
-  { word: "공구", category: "location", value: "차고" },
-  { word: "작업대", category: "location", value: "작업실" },
-  { word: "별채", category: "location", value: "별관" },
-  { word: "악보", category: "location", value: "음악실" },
-  { word: "밀랍", category: "item", value: "촛대" },
-  { word: "봉투", category: "item", value: "편지칼" },
-  { word: "독성", category: "item", value: "독약" },
-  { word: "매듭", category: "item", value: "밧줄" },
-  { word: "못", category: "item", value: "망치" },
-  { word: "탄환", category: "item", value: "권총" },
-  { word: "처방", category: "item", value: "약병" },
-  { word: "도자기", category: "item", value: "장식품" },
-  { word: "와인", category: "item", value: "와인잔" },
-  { word: "재단", category: "item", value: "가위" },
-  { word: "나사", category: "item", value: "드라이버" },
-  { word: "자물쇠", category: "item", value: "열쇠" },
-  { word: "향", category: "item", value: "향수병" },
-  { word: "우승", category: "item", value: "트로피" },
-  { word: "페이지", category: "item", value: "책" },
-  { word: "발자국", category: "extra", value: "" },
-  { word: "흔적", category: "extra", value: "" },
-  { word: "그림자", category: "extra", value: "" },
-  { word: "소문", category: "extra", value: "" },
-  { word: "단서", category: "extra", value: "" },
+  { word: "파문", category: "motive", value: "복수" },
+  { word: "안개", category: "motive", value: "금전 문제" },
+  { word: "여백", category: "motive", value: "질투" },
+  { word: "메아리", category: "motive", value: "비밀 은폐" },
+  { word: "윤곽", category: "motive", value: "권력욕" },
+  { word: "기척", category: "motive", value: "오랜 원한" },
+  { word: "잔향", category: "motive", value: "협박" },
+  { word: "진동", category: "motive", value: "상속 다툼" },
+  { word: "기류", category: "motive", value: "배신감" },
+  { word: "불씨", category: "motive", value: "명예 훼손" },
+  { word: "지평선", category: "location", value: "서재" },
+  { word: "별자리", category: "location", value: "도서관" },
+  { word: "물비늘", category: "location", value: "정원" },
+  { word: "낙차", category: "location", value: "주방" },
+  { word: "풍경", category: "location", value: "창고" },
+  { word: "서리", category: "location", value: "연구실" },
+  { word: "물결", category: "location", value: "온실" },
+  { word: "구름", category: "location", value: "지하실" },
+  { word: "숨결", category: "location", value: "복도" },
+  { word: "온도", category: "location", value: "응접실" },
+  { word: "그늘", category: "location", value: "옥상" },
+  { word: "모래", category: "location", value: "차고" },
+  { word: "소용돌이", category: "location", value: "작업실" },
+  { word: "빛무리", category: "location", value: "별관" },
+  { word: "계절", category: "location", value: "음악실" },
+  { word: "시차", category: "item", value: "촛대" },
+  { word: "수평선", category: "item", value: "편지칼" },
+  { word: "표류", category: "item", value: "독약" },
+  { word: "기상", category: "item", value: "밧줄" },
+  { word: "장막", category: "item", value: "망치" },
+  { word: "시간", category: "item", value: "권총" },
+  { word: "파장", category: "item", value: "약병" },
+  { word: "노을", category: "item", value: "장식품" },
+  { word: "반사", category: "item", value: "와인잔" },
+  { word: "얼룩", category: "item", value: "가위" },
+  { word: "무늬", category: "item", value: "드라이버" },
+  { word: "잔상", category: "item", value: "열쇠" },
+  { word: "음영", category: "item", value: "향수병" },
+  { word: "공간", category: "item", value: "트로피" },
+  { word: "침묵", category: "item", value: "책" },
+  { word: "도약", category: "extra", value: "" },
+  { word: "방향", category: "extra", value: "" },
+  { word: "단계", category: "extra", value: "" },
+  { word: "순환", category: "extra", value: "" },
+  { word: "균형", category: "extra", value: "" },
 ];
 
 // 각 버튼의 원래 위치와 크기, 확대 속도와 애니메이션 시간을 저장한다.
@@ -372,6 +372,11 @@ canvas.addEventListener("mousemove", (event) => {
   choiceCancelButton.isHovered =
     gameState === GameState.CHOICE &&
     isPointInsideButton(mouseX, mouseY, choiceCancelButton);
+  for (const suspect of suspects) {
+    suspect.isHovered =
+      gameState === GameState.CHOICE &&
+      isPointOverSuspect(mouseX, mouseY, suspect);
+  }
 });
 
 // 캔버스를 벗어나면 확대 상태를 해제해 버튼 크기를 원래대로 돌린다.
@@ -381,6 +386,9 @@ canvas.addEventListener("mouseleave", () => {
   }
   hintPanelToggleButton.isHovered = false;
   choiceCancelButton.isHovered = false;
+  for (const suspect of suspects) {
+    suspect.isHovered = false;
+  }
 });
 
 function drawBackground() {
@@ -413,6 +421,19 @@ function isPointInsideButton(x, y, button) {
     y >= button.y + button.height / 2 - scaledHeight / 2 &&
     y <= button.y + button.height / 2 + scaledHeight / 2
   );
+}
+
+function isPointOverSuspect(x, y, suspect) {
+  const headDistanceX = x - suspect.x;
+  const headDistanceY = y - 270;
+  const isOverHead = headDistanceX ** 2 + headDistanceY ** 2 <= 25 ** 2;
+  const isOverBody =
+    x >= suspect.x - 15 &&
+    x <= suspect.x + 15 &&
+    y >= 300 &&
+    y <= 350;
+
+  return isOverHead || isOverBody;
 }
 
 function drawHintPanel() {
@@ -599,8 +620,18 @@ function drawGameUI() {
     ctx.beginPath();
     ctx.arc(centerX, 270, 25, 0, Math.PI * 2);
     ctx.fill();
+    if (gameState === GameState.CHOICE && suspect.isHovered) {
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
     ctx.fillStyle = suspect.color;
     ctx.fillRect(centerX - 15, 300, 30, 50);
+    if (gameState === GameState.CHOICE && suspect.isHovered) {
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(centerX - 15, 300, 30, 50);
+    }
   }
 
   if (gameState === GameState.PLAYING) {
