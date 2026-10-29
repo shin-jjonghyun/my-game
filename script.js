@@ -1,6 +1,11 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// 클릭 원의 최대 반지름(px)과 확산 속도(px/ms)를 조절한다.
+const clickRippleMaxRadius = 30;
+const clickRippleSpeed = 0.25;
+const clickRipples = [];
+
 // 달과 별의 위치, 크기, 이동 속도를 한곳에서 관리한다.
 const skyHeight = 450;
 const moon = {
@@ -53,6 +58,20 @@ const buttons = [
   },
 ];
 let previousFrameTime = 0;
+
+// 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
+canvas.addEventListener("click", (event) => {
+  if (event.button !== 0) {
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  clickRipples.push({
+    x: (event.clientX - rect.left) * (canvas.width / rect.width),
+    y: (event.clientY - rect.top) * (canvas.height / rect.height),
+    radius: 0,
+  });
+});
 
 // 마우스 위치를 캔버스 좌표로 바꾸고 확대된 버튼 영역까지 확인한다.
 canvas.addEventListener("mousemove", (event) => {
@@ -203,6 +222,18 @@ function drawRoundedButton(button) {
   ctx.restore();
 }
 
+function drawClickRipples() {
+  for (const ripple of clickRipples) {
+    const progress = ripple.radius / clickRippleMaxRadius;
+
+    ctx.beginPath();
+    ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${1 - progress})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+}
+
 function gameLoop(frameTime) {
   const deltaTime = previousFrameTime === 0 ? 0 : frameTime - previousFrameTime;
   previousFrameTime = frameTime;
@@ -246,9 +277,18 @@ function gameLoop(frameTime) {
     }
   }
 
+  // 설정한 속도로 원을 키우고, 최대 반지름에 도달한 효과는 제거한다.
+  for (let i = clickRipples.length - 1; i >= 0; i -= 1) {
+    clickRipples[i].radius += clickRippleSpeed * deltaTime;
+    if (clickRipples[i].radius >= clickRippleMaxRadius) {
+      clickRipples.splice(i, 1);
+    }
+  }
+
   // 그리기: 배경을 먼저, UI와 게임 오브젝트를 나중에 그린다.
   drawBackground();
   drawGameUI();
+  drawClickRipples();
 
   requestAnimationFrame(gameLoop);
 }
