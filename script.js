@@ -90,6 +90,109 @@ const suspects = [
   { x: 690, color: "#8a6b9b", motive: "", location: "", item: "" },
 ];
 let culpritSuspect = null;
+let hintClues = [];
+
+const clueColors = {
+  motive: "#c62828",
+  item: "#1565c0",
+  location: "#b8860b",
+};
+
+// 각 단어는 어떤 용의자 속성을 설명하는지 함께 저장한다.
+const adjectiveWords = [
+  { word: "쓰라린", category: "motive", value: "복수" },
+  { word: "탐욕스러운", category: "motive", value: "금전 문제" },
+  { word: "질투심 어린", category: "motive", value: "질투" },
+  { word: "필사적인", category: "motive", value: "비밀 은폐" },
+  { word: "야심 찬", category: "motive", value: "권력욕" },
+  { word: "오래된", category: "motive", value: "오랜 원한" },
+  { word: "위협적인", category: "motive", value: "협박" },
+  { word: "격렬한", category: "motive", value: "상속 다툼" },
+  { word: "배신당한", category: "motive", value: "배신감" },
+  { word: "모욕적인", category: "motive", value: "명예 훼손" },
+  { word: "고요한", category: "location", value: "서재" },
+  { word: "한적한", category: "location", value: "도서관" },
+  { word: "꽃이 핀", category: "location", value: "정원" },
+  { word: "분주한", category: "location", value: "주방" },
+  { word: "어두운", category: "location", value: "창고" },
+  { word: "비밀스러운", category: "location", value: "연구실" },
+  { word: "습한", category: "location", value: "온실" },
+  { word: "으슥한", category: "location", value: "지하실" },
+  { word: "긴", category: "location", value: "복도" },
+  { word: "화려한", category: "location", value: "응접실" },
+  { word: "탁 트인", category: "location", value: "옥상" },
+  { word: "어수선한", category: "location", value: "차고" },
+  { word: "먼지 쌓인", category: "location", value: "작업실" },
+  { word: "외딴", category: "location", value: "별관" },
+  { word: "울림 있는", category: "location", value: "음악실" },
+  { word: "묵직한", category: "item", value: "촛대" },
+  { word: "날카로운", category: "item", value: "편지칼" },
+  { word: "치명적인", category: "item", value: "독약" },
+  { word: "질긴", category: "item", value: "밧줄" },
+  { word: "무거운", category: "item", value: "망치" },
+  { word: "장전된", category: "item", value: "권총" },
+  { word: "작은", category: "item", value: "약병" },
+  { word: "깨지기 쉬운", category: "item", value: "장식품" },
+  { word: "깨끗한", category: "item", value: "와인잔" },
+  { word: "날 선", category: "item", value: "가위" },
+  { word: "단단한", category: "item", value: "드라이버" },
+  { word: "낡은", category: "item", value: "열쇠" },
+  { word: "향기로운", category: "item", value: "향수병" },
+  { word: "반짝이는", category: "item", value: "트로피" },
+  { word: "두꺼운", category: "item", value: "책" },
+  { word: "수상한", category: "extra", value: "" },
+  { word: "희미한", category: "extra", value: "" },
+  { word: "낯선", category: "extra", value: "" },
+  { word: "조용한", category: "extra", value: "" },
+  { word: "불길한", category: "extra", value: "" },
+];
+const nounWords = [
+  { word: "앙갚음", category: "motive", value: "복수" },
+  { word: "빚", category: "motive", value: "금전 문제" },
+  { word: "시샘", category: "motive", value: "질투" },
+  { word: "은폐", category: "motive", value: "비밀 은폐" },
+  { word: "야망", category: "motive", value: "권력욕" },
+  { word: "앙금", category: "motive", value: "오랜 원한" },
+  { word: "압박", category: "motive", value: "협박" },
+  { word: "유산", category: "motive", value: "상속 다툼" },
+  { word: "기만", category: "motive", value: "배신감" },
+  { word: "모욕", category: "motive", value: "명예 훼손" },
+  { word: "책장", category: "location", value: "서재" },
+  { word: "열람석", category: "location", value: "도서관" },
+  { word: "화단", category: "location", value: "정원" },
+  { word: "조리대", category: "location", value: "주방" },
+  { word: "선반", category: "location", value: "창고" },
+  { word: "실험대", category: "location", value: "연구실" },
+  { word: "화분", category: "location", value: "온실" },
+  { word: "계단", category: "location", value: "지하실" },
+  { word: "통로", category: "location", value: "복도" },
+  { word: "소파", category: "location", value: "응접실" },
+  { word: "난간", category: "location", value: "옥상" },
+  { word: "공구", category: "location", value: "차고" },
+  { word: "작업대", category: "location", value: "작업실" },
+  { word: "별채", category: "location", value: "별관" },
+  { word: "악보", category: "location", value: "음악실" },
+  { word: "밀랍", category: "item", value: "촛대" },
+  { word: "봉투", category: "item", value: "편지칼" },
+  { word: "독성", category: "item", value: "독약" },
+  { word: "매듭", category: "item", value: "밧줄" },
+  { word: "못", category: "item", value: "망치" },
+  { word: "탄환", category: "item", value: "권총" },
+  { word: "처방", category: "item", value: "약병" },
+  { word: "도자기", category: "item", value: "장식품" },
+  { word: "와인", category: "item", value: "와인잔" },
+  { word: "재단", category: "item", value: "가위" },
+  { word: "나사", category: "item", value: "드라이버" },
+  { word: "자물쇠", category: "item", value: "열쇠" },
+  { word: "향", category: "item", value: "향수병" },
+  { word: "우승", category: "item", value: "트로피" },
+  { word: "페이지", category: "item", value: "책" },
+  { word: "발자국", category: "extra", value: "" },
+  { word: "흔적", category: "extra", value: "" },
+  { word: "그림자", category: "extra", value: "" },
+  { word: "소문", category: "extra", value: "" },
+  { word: "단서", category: "extra", value: "" },
+];
 
 // 각 버튼의 원래 위치와 크기, 확대 속도와 애니메이션 시간을 저장한다.
 const buttonHoverScale = 1.1;
@@ -149,6 +252,46 @@ function initializeGame() {
 
   // 게임마다 용의자 한 명을 범인으로 지정해 내부 변수에만 보관한다.
   culpritSuspect = suspects[Math.floor(Math.random() * suspects.length)];
+
+  const targets = [
+    { category: "motive", label: "동기", value: culpritSuspect.motive },
+    { category: "item", label: "물건", value: culpritSuspect.item },
+    { category: "location", label: "장소", value: culpritSuspect.location },
+  ];
+  const selectedAdjectives = selectNineWords(adjectiveWords, targets);
+  const selectedNouns = selectNineWords(nounWords, targets);
+
+  // 범인의 세 속성에 맞는 형용사와 명사를 조합해 힌트 문장을 만든다.
+  hintClues = targets.map((target) => {
+    const adjective = selectedAdjectives.find(
+      (word) => word.category === target.category && word.value === target.value,
+    );
+    const noun = selectedNouns.find(
+      (word) => word.category === target.category && word.value === target.value,
+    );
+    return {
+      category: target.category,
+      label: target.label,
+      text: `${adjective.word} ${noun.word}`,
+    };
+  });
+}
+
+function selectNineWords(words, targets) {
+  const requiredWords = targets.map((target) => {
+    const word = words.find(
+      (candidate) =>
+        candidate.category === target.category && candidate.value === target.value,
+    );
+    if (!word) {
+      throw new Error(
+        `힌트 단어를 찾을 수 없습니다: ${target.category} - ${target.value}`,
+      );
+    }
+    return word;
+  });
+  const remainingWords = words.filter((word) => !requiredWords.includes(word));
+  return shuffle([...requiredWords, ...shuffle(remainingWords).slice(0, 6)]);
 }
 
 // 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
@@ -233,9 +376,8 @@ function drawHintPanel() {
   ctx.textBaseline = "middle";
   ctx.fillText("힌트 목록", hintPanelX + hintPanelWidth / 2, 34);
 
-  // 장소, 도구, 동기 항목을 세로로 배치한다.
-  const hints = ["장소", "도구", "동기"];
-  for (let i = 0; i < hints.length; i += 1) {
+  // 범인의 장소, 물건, 동기를 가리키는 무작위 힌트를 표시한다.
+  for (let i = 0; i < hintClues.length; i += 1) {
     const boxY = 55 + i * 70;
 
     ctx.fillStyle = "#fffaf0";
@@ -244,9 +386,19 @@ function drawHintPanel() {
     ctx.lineWidth = 1;
     ctx.strokeRect(25, boxY, hintPanelWidth - 10, 50);
 
-    ctx.fillStyle = "#29232d";
-    ctx.font = "16px sans-serif";
-    ctx.fillText(hints[i], hintPanelX + hintPanelWidth / 2, boxY + 25);
+    ctx.fillStyle = clueColors[hintClues[i].category];
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillText(hintClues[i].label, hintPanelX + hintPanelWidth / 2, boxY + 13);
+    ctx.font = "11px sans-serif";
+    ctx.fillStyle = clueColors[hintClues[i].category];
+    const clueLines = wrapText(hintClues[i].text, hintPanelWidth - 20);
+    for (let lineIndex = 0; lineIndex < clueLines.length; lineIndex += 1) {
+      ctx.fillText(
+        clueLines[lineIndex],
+        hintPanelX + hintPanelWidth / 2,
+        boxY + 32 + lineIndex * 12,
+      );
+    }
   }
 
   // 힌트 목록의 스크롤 바를 그린다.
@@ -301,6 +453,32 @@ function wrapText(text, maxWidth) {
   return lines;
 }
 
+function wrapColoredText(segments, maxWidth) {
+  const lines = [[]];
+  let lineWidth = 0;
+
+  for (const segment of segments) {
+    for (const character of segment.text) {
+      const characterWidth = ctx.measureText(character).width;
+      if (lineWidth + characterWidth > maxWidth && lineWidth > 0) {
+        lines.push([]);
+        lineWidth = 0;
+      }
+
+      const currentLine = lines[lines.length - 1];
+      const previousSegment = currentLine[currentLine.length - 1];
+      if (previousSegment && previousSegment.color === segment.color) {
+        previousSegment.text += character;
+      } else {
+        currentLine.push({ text: character, color: segment.color });
+      }
+      lineWidth += characterWidth;
+    }
+  }
+
+  return lines;
+}
+
 function drawGameUI() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -335,15 +513,34 @@ function drawGameUI() {
 
     // 배정된 장소, 물건, 동기를 엮어 각 용의자의 알리바이로 표시한다.
     const itemParticle = hasFinalConsonant(suspect.item) ? "을" : "를";
-    const alibi =
-      `저는 사건 당시 ${suspect.location}에 있었고 ` +
-      `${suspect.item}${itemParticle} 가지고 있었습니다. ` +
-      `피해자와는 ${suspect.motive}로 인한 문제가 있었습니다.`;
     ctx.font = "10px sans-serif";
-    const alibiLines = wrapText(alibi, 114);
+    const alibiLines = wrapColoredText(
+      [
+        { text: "저는 사건 당시 " },
+        { text: suspect.location, color: clueColors.location },
+        { text: "에 있었고 " },
+        { text: `${suspect.item}${itemParticle}`, color: clueColors.item },
+        { text: " 가지고 있었습니다. 피해자와는 " },
+        { text: suspect.motive, color: clueColors.motive },
+        { text: "로 인한 문제가 있었습니다." },
+      ],
+      114,
+    );
     for (let lineIndex = 0; lineIndex < alibiLines.length; lineIndex += 1) {
-      ctx.fillText(alibiLines[lineIndex], centerX, bubbleY + 34 + lineIndex * 12);
+      const line = alibiLines[lineIndex];
+      const lineWidth = line.reduce(
+        (width, segment) => width + ctx.measureText(segment.text).width,
+        0,
+      );
+      let textX = centerX - lineWidth / 2;
+      for (const segment of line) {
+        ctx.fillStyle = segment.color || "#24202b";
+        ctx.textAlign = "left";
+        ctx.fillText(segment.text, textX, bubbleY + 34 + lineIndex * 12);
+        textX += ctx.measureText(segment.text).width;
+      }
     }
+    ctx.textAlign = "center";
 
     ctx.fillStyle = "#e7bd99";
     ctx.beginPath();
