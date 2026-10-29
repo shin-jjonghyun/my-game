@@ -89,6 +89,7 @@ const suspects = [
   { x: 550, color: "#6b8c65", motive: "", location: "", item: "" },
   { x: 690, color: "#8a6b9b", motive: "", location: "", item: "" },
 ];
+let culpritSuspect = null;
 
 // 각 버튼의 원래 위치와 크기, 확대 속도와 애니메이션 시간을 저장한다.
 const buttonHoverScale = 1.1;
@@ -145,6 +146,9 @@ function initializeGame() {
     suspects[i].location = shuffledLocations[i];
     suspects[i].item = shuffledItems[i];
   }
+
+  // 게임마다 용의자 한 명을 범인으로 지정해 내부 변수에만 보관한다.
+  culpritSuspect = suspects[Math.floor(Math.random() * suspects.length)];
 }
 
 // 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
@@ -264,6 +268,39 @@ function drawHintPanel() {
   ctx.fillText(isHintPanelExpanded ? "<" : ">", toggleButtonX, toggleButtonY);
 }
 
+function wrapText(text, maxWidth) {
+  const lines = [];
+  let line = "";
+
+  for (const word of text.split(" ")) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      line = candidate;
+      continue;
+    }
+
+    if (line) {
+      lines.push(line);
+    }
+    line = "";
+
+    for (const character of word) {
+      const candidateCharacter = line + character;
+      if (ctx.measureText(candidateCharacter).width > maxWidth && line) {
+        lines.push(line);
+        line = character;
+      } else {
+        line = candidateCharacter;
+      }
+    }
+  }
+
+  if (line) {
+    lines.push(line);
+  }
+  return lines;
+}
+
 function drawGameUI() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -295,10 +332,18 @@ function drawGameUI() {
     ctx.fillStyle = "#24202b";
     ctx.font = "bold 12px sans-serif";
     ctx.fillText(`용의자 ${i + 1}`, centerX, bubbleY + 14);
-    ctx.font = "11px sans-serif";
-    ctx.fillText(`동기: ${suspect.motive}`, centerX, bubbleY + 39);
-    ctx.fillText(`장소: ${suspect.location}`, centerX, bubbleY + 59);
-    ctx.fillText(`물건: ${suspect.item}`, centerX, bubbleY + 79);
+
+    // 배정된 장소, 물건, 동기를 엮어 각 용의자의 알리바이로 표시한다.
+    const itemParticle = hasFinalConsonant(suspect.item) ? "을" : "를";
+    const alibi =
+      `저는 사건 당시 ${suspect.location}에 있었고 ` +
+      `${suspect.item}${itemParticle} 가지고 있었습니다. ` +
+      `피해자와는 ${suspect.motive}로 인한 문제가 있었습니다.`;
+    ctx.font = "10px sans-serif";
+    const alibiLines = wrapText(alibi, 114);
+    for (let lineIndex = 0; lineIndex < alibiLines.length; lineIndex += 1) {
+      ctx.fillText(alibiLines[lineIndex], centerX, bubbleY + 34 + lineIndex * 12);
+    }
 
     ctx.fillStyle = "#e7bd99";
     ctx.beginPath();
@@ -312,6 +357,17 @@ function drawGameUI() {
   for (const button of buttons) {
     drawRoundedButton(button);
   }
+}
+
+function hasFinalConsonant(word) {
+  const lastCharacter = word.charCodeAt(word.length - 1);
+  const hangulBaseCode = 0xac00;
+  const hangulEndCode = 0xd7a3;
+  return (
+    lastCharacter >= hangulBaseCode &&
+    lastCharacter <= hangulEndCode &&
+    (lastCharacter - hangulBaseCode) % 28 !== 0
+  );
 }
 
 function drawRoundedButton(button) {
