@@ -91,6 +91,11 @@ const suspects = [
 ];
 let culpritSuspect = null;
 let hintClues = [];
+const GameState = {
+  PLAYING: "Playing",
+  CHOICE: "Choice",
+};
+let gameState = GameState.PLAYING;
 
 const clueColors = {
   motive: "#c62828",
@@ -210,20 +215,28 @@ const buttons = [
     animationTargetScale: 1,
     isHovered: false,
   },
-  {
-    x: 680,
-    y: 500,
-    width: 100,
-    height: 70,
-    label: "단서 특정",
-    scale: 1,
-    scaleSpeed: 0.0015,
-    animationDurationMs: 60,
-    animationElapsedMs: 0,
-    animationTargetScale: 1,
-    isHovered: false,
-  },
 ];
+const hintPanelToggleButton = {
+  radius: 14,
+  scale: 1,
+  scaleSpeed: buttons[0].scaleSpeed,
+  animationDurationMs: buttons[0].animationDurationMs,
+  animationElapsedMs: 0,
+  animationTargetScale: 1,
+  isHovered: false,
+};
+const choiceCancelButton = {
+  x: 730,
+  y: 520,
+  width: 50,
+  height: 50,
+  scale: 1,
+  scaleSpeed: buttons[0].scaleSpeed,
+  animationDurationMs: buttons[0].animationDurationMs,
+  animationElapsedMs: 0,
+  animationTargetScale: 1,
+  isHovered: false,
+};
 let previousFrameTime = 0;
 
 // 목록을 무작위로 섞고, 중복 없이 각 용의자에게 속성을 배정한다.
@@ -313,11 +326,27 @@ canvas.addEventListener("click", (event) => {
   // 패널 오른쪽 가장자리의 화살표 버튼을 누르면 펼침 상태를 전환한다.
   const toggleButtonX = hintPanelX + hintPanelWidth;
   const toggleButtonY = hintPanelY + 225;
-  const toggleButtonRadius = 14;
   const distanceX = mouseX - toggleButtonX;
   const distanceY = mouseY - toggleButtonY;
-  if (distanceX ** 2 + distanceY ** 2 <= toggleButtonRadius ** 2) {
+  if (
+    distanceX ** 2 + distanceY ** 2 <=
+    (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2
+  ) {
     isHintPanelExpanded = !isHintPanelExpanded;
+  }
+
+  if (
+    gameState === GameState.PLAYING &&
+    isPointInsideButton(mouseX, mouseY, buttons[0])
+  ) {
+    gameState = GameState.CHOICE;
+    buttons[0].isHovered = false;
+  } else if (
+    gameState === GameState.CHOICE &&
+    isPointInsideButton(mouseX, mouseY, choiceCancelButton)
+  ) {
+    gameState = GameState.PLAYING;
+    choiceCancelButton.isHovered = false;
   }
 });
 
@@ -328,14 +357,21 @@ canvas.addEventListener("mousemove", (event) => {
   const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
   for (const button of buttons) {
-    const scaledWidth = button.width * button.scale;
-    const scaledHeight = button.height * button.scale;
     button.isHovered =
-      mouseX >= button.x + button.width / 2 - scaledWidth / 2 &&
-      mouseX <= button.x + button.width / 2 + scaledWidth / 2 &&
-      mouseY >= button.y + button.height / 2 - scaledHeight / 2 &&
-      mouseY <= button.y + button.height / 2 + scaledHeight / 2;
+      gameState === GameState.PLAYING &&
+      isPointInsideButton(mouseX, mouseY, button);
   }
+
+  const toggleButtonX = hintPanelX + hintPanelWidth;
+  const toggleButtonY = hintPanelY + 225;
+  const toggleDistanceX = mouseX - toggleButtonX;
+  const toggleDistanceY = mouseY - toggleButtonY;
+  hintPanelToggleButton.isHovered =
+    toggleDistanceX ** 2 + toggleDistanceY ** 2 <=
+    (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2;
+  choiceCancelButton.isHovered =
+    gameState === GameState.CHOICE &&
+    isPointInsideButton(mouseX, mouseY, choiceCancelButton);
 });
 
 // 캔버스를 벗어나면 확대 상태를 해제해 버튼 크기를 원래대로 돌린다.
@@ -343,6 +379,8 @@ canvas.addEventListener("mouseleave", () => {
   for (const button of buttons) {
     button.isHovered = false;
   }
+  hintPanelToggleButton.isHovered = false;
+  choiceCancelButton.isHovered = false;
 });
 
 function drawBackground() {
@@ -364,6 +402,17 @@ function drawBackground() {
     ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+function isPointInsideButton(x, y, button) {
+  const scaledWidth = button.width * button.scale;
+  const scaledHeight = button.height * button.scale;
+  return (
+    x >= button.x + button.width / 2 - scaledWidth / 2 &&
+    x <= button.x + button.width / 2 + scaledWidth / 2 &&
+    y >= button.y + button.height / 2 - scaledHeight / 2 &&
+    y <= button.y + button.height / 2 + scaledHeight / 2
+  );
 }
 
 function drawHintPanel() {
@@ -411,13 +460,17 @@ function drawHintPanel() {
   // 화살표 버튼을 패널의 현재 오른쪽 가장자리 중앙에 그린다.
   const toggleButtonX = hintPanelX + hintPanelWidth;
   const toggleButtonY = hintPanelY + 225;
+  ctx.save();
+  ctx.translate(toggleButtonX, toggleButtonY);
+  ctx.scale(hintPanelToggleButton.scale, hintPanelToggleButton.scale);
   ctx.beginPath();
-  ctx.arc(toggleButtonX, toggleButtonY, 14, 0, Math.PI * 2);
+  ctx.arc(0, 0, hintPanelToggleButton.radius, 0, Math.PI * 2);
   ctx.fillStyle = "#8c806e";
   ctx.fill();
   ctx.fillStyle = "#fff";
   ctx.font = "bold 18px sans-serif";
-  ctx.fillText(isHintPanelExpanded ? "<" : ">", toggleButtonX, toggleButtonY);
+  ctx.fillText(isHintPanelExpanded ? "<" : ">", 0, 0);
+  ctx.restore();
 }
 
 function wrapText(text, maxWidth) {
@@ -550,9 +603,34 @@ function drawGameUI() {
     ctx.fillRect(centerX - 15, 300, 30, 50);
   }
 
-  // 화면 아래쪽에 동작 버튼을 그린다.
-  for (const button of buttons) {
-    drawRoundedButton(button);
+  if (gameState === GameState.PLAYING) {
+    // Playing 상태에서만 범인 지목 버튼을 표시한다.
+    for (const button of buttons) {
+      drawRoundedButton(button);
+    }
+  } else {
+    // Choice 상태에서는 지목 안내와 취소 버튼만 표시한다.
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillText("범인을 지목하세요", canvas.width / 2, 575);
+
+    ctx.save();
+    ctx.translate(
+      choiceCancelButton.x + choiceCancelButton.width / 2,
+      choiceCancelButton.y + choiceCancelButton.height / 2,
+    );
+    ctx.scale(choiceCancelButton.scale, choiceCancelButton.scale);
+    ctx.fillStyle = "#a65b5b";
+    ctx.fillRect(
+      -choiceCancelButton.width / 2,
+      -choiceCancelButton.height / 2,
+      choiceCancelButton.width,
+      choiceCancelButton.height,
+    );
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 28px sans-serif";
+    ctx.fillText("X", 0, 0);
+    ctx.restore();
   }
 }
 
@@ -628,7 +706,11 @@ function gameLoop(frameTime) {
     }
   }
 
-  for (const button of buttons) {
+  for (const button of [
+    ...buttons,
+    hintPanelToggleButton,
+    choiceCancelButton,
+  ]) {
     const targetScale = button.isHovered ? buttonHoverScale : 1;
     if (button.animationTargetScale !== targetScale) {
       button.animationTargetScale = targetScale;
