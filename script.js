@@ -165,6 +165,7 @@ let currentLevel = 1;
 const initialAdditionalHints = 2;
 let remainingAdditionalHints = initialAdditionalHints;
 let usedAdditionalHintThisLevel = false;
+let hadWrongGuessThisLevel = false;
 let levelRewards = [];
 // 화면 입력과 렌더링 흐름을 구분하는 게임 상태 목록이다.
 const GameState = {
@@ -467,6 +468,7 @@ function startNewGame() {
   remainingChances = initialChances;
   remainingAdditionalHints = initialAdditionalHints;
   usedAdditionalHintThisLevel = false;
+  hadWrongGuessThisLevel = false;
   levelRewards = [];
   choiceResult = "";
   choiceResultElapsedMs = 0;
@@ -494,6 +496,7 @@ function startNewGame() {
 function startNextLevel() {
   currentLevel += 1;
   usedAdditionalHintThisLevel = false;
+  hadWrongGuessThisLevel = false;
   levelRewards = [];
   choiceResult = "";
   choiceResultElapsedMs = 0;
@@ -733,7 +736,7 @@ canvas.addEventListener("click", (event) => {
       choiceResultElapsedMs = 0;
       if (choiceResult === "정답") {
         choiceResult = "";
-        const caughtOnFirstAttempt = remainingChances === initialChances;
+        const caughtOnFirstAttempt = !hadWrongGuessThisLevel;
         levelRewards = [];
         if (!usedAdditionalHintThisLevel) {
           remainingChances += 1;
@@ -747,6 +750,7 @@ canvas.addEventListener("click", (event) => {
         }
         gameState = GameState.LEVEL_CLEAR;
       } else {
+        hadWrongGuessThisLevel = true;
         remainingChances -= 1;
         if (remainingChances === 0) {
           gameState = GameState.GAME_OVER;
