@@ -739,6 +739,8 @@ canvas.addEventListener("click", (event) => {
           remainingChances += 1;
           levelRewards.push("추가 힌트를 사용하지 않아 남은 기회 +1");
         }
+        remainingAdditionalHints += 1;
+        levelRewards.push("레벨 클리어 보상으로 추가 힌트 +1");
         if (caughtOnFirstAttempt) {
           remainingAdditionalHints += 1;
           levelRewards.push("한 번에 범인을 맞혀 추가 힌트 +1");
