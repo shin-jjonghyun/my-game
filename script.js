@@ -417,23 +417,7 @@ function initializeGame() {
     { category: "item", label: "도구", value: culpritSuspect.item },
     { category: "location", label: "장소", value: culpritSuspect.location },
   ];
-  const selectedAdjectives = selectNineWords(adjectiveWords, targets);
-  const selectedNouns = selectNineWords(nounWords, targets);
-
-  // 범인의 세 속성에 맞는 형용사와 명사를 조합해 힌트 문장을 만든다.
-  availableHintClues = targets.map((target) => {
-    const adjective = selectedAdjectives.find(
-      (word) => word.category === target.category && word.value === target.value,
-    );
-    const noun = selectedNouns.find(
-      (word) => word.category === target.category && word.value === target.value,
-    );
-    return {
-      category: target.category,
-      label: target.label,
-      text: `${adjective.word} ${noun.word}`,
-    };
-  });
+  availableHintClues = targets;
 }
 
 function startNewGame() {
@@ -462,20 +446,17 @@ function startNewGame() {
 }
 
 function chooseStartingHint(category) {
-  const selectedHint = availableHintClues.find(
+  const target = availableHintClues.find(
     (clue) => clue.category === category,
   );
-  if (!selectedHint) {
+  if (!target) {
     throw new Error(`선택한 종류의 힌트를 찾을 수 없습니다: ${category}`);
   }
 
   if (gameState === GameState.GAME_WAITING) {
-    hintClues = [selectedHint];
+    hintClues = [createHintClue(target)];
   } else if (gameState === GameState.HINT_WAITING) {
-    if (hintClues.some((clue) => clue.category === category)) {
-      return;
-    }
-    hintClues.push(selectedHint);
+    hintClues.push(createHintClue(target));
   } else {
     return;
   }
@@ -487,15 +468,39 @@ function chooseStartingHint(category) {
 }
 
 function getAvailableHintChoiceButtons() {
-  if (gameState !== GameState.HINT_WAITING) {
-    return hintChoiceButtons;
+  return hintChoiceButtons.filter((button) =>
+    availableHintClues.some((clue) => clue.category === button.category),
+  );
+}
+
+function createHintClue(target) {
+  const usedAdjectives = new Set(hintClues.map((clue) => clue.adjective));
+  const usedNouns = new Set(hintClues.map((clue) => clue.noun));
+  const targetCategories = attributeCategories[target.value];
+  const findUnusedWord = (words, usedWords) => {
+    const categoryWords = words.filter(
+      (word) => word.category === target.category && !usedWords.has(word.word),
+    );
+    const relatedWords = categoryWords.filter((word) =>
+      word.categories.some((category) => targetCategories.includes(category)),
+    );
+    const candidateWords = relatedWords.length > 0 ? relatedWords : categoryWords;
+    return shuffle(candidateWords)[0];
+  };
+  const adjective = findUnusedWord(adjectiveWords, usedAdjectives);
+  const noun = findUnusedWord(nounWords, usedNouns);
+
+  if (!adjective || !noun) {
+    throw new Error(`새 힌트를 만들 단어가 부족합니다: ${target.category}`);
   }
 
-  return hintChoiceButtons.filter(
-    (button) =>
-      !hintClues.some((clue) => clue.category === button.category) &&
-      availableHintClues.some((clue) => clue.category === button.category),
-  );
+  return {
+    category: target.category,
+    label: target.label,
+    adjective: adjective.word,
+    noun: noun.word,
+    text: `${adjective.word} ${noun.word}`,
+  };
 }
 
 function assignRelatedAttributes(attributes) {
@@ -547,23 +552,6 @@ function findRelatedPairs(attributes, pairCount) {
   }
 
   return null;
-}
-
-function selectNineWords(words, targets) {
-  const requiredWords = targets.map((target) => {
-    const word = words.find(
-      (candidate) =>
-        candidate.category === target.category && candidate.value === target.value,
-    );
-    if (!word) {
-      throw new Error(
-        `힌트 단어를 찾을 수 없습니다: ${target.category} - ${target.value}`,
-      );
-    }
-    return word;
-  });
-  const remainingWords = words.filter((word) => !requiredWords.includes(word));
-  return shuffle([...requiredWords, ...shuffle(remainingWords).slice(0, 6)]);
 }
 
 // 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
@@ -780,29 +768,42 @@ function drawHintPanel() {
   ctx.textBaseline = "middle";
   ctx.fillText("힌트 목록", hintPanelX + hintPanelWidth / 2, 34);
 
-  // 시작 시 선택한 범인 속성의 힌트만 표시한다.
-  for (let i = 0; i < hintClues.length; i += 1) {
-    const boxY = 55 + i * 70;
+  const groupedClues = hintClues.reduce((groups, clue) => {
+    let group = groups.find((candidate) => candidate.category === clue.category);
+    if (!group) {
+      group = { category: clue.category, label: clue.label, clues: [] };
+      groups.push(group);
+    }
+    group.clues.push(clue);
+    return groups;
+  }, []);
+
+  let boxY = 55;
+  for (const group of groupedClues) {
+    const boxHeight = 32 + group.clues.length * 36;
 
     ctx.fillStyle = "#fffaf0";
-    ctx.fillRect(25, boxY, hintPanelWidth - 10, 50);
+    ctx.fillRect(25, boxY, hintPanelWidth - 10, boxHeight);
     ctx.strokeStyle = "#b7aa91";
     ctx.lineWidth = 1;
-    ctx.strokeRect(25, boxY, hintPanelWidth - 10, 50);
+    ctx.strokeRect(25, boxY, hintPanelWidth - 10, boxHeight);
 
-    ctx.fillStyle = clueColors[hintClues[i].category];
+    ctx.fillStyle = clueColors[group.category];
     ctx.font = "bold 12px sans-serif";
-    ctx.fillText(hintClues[i].label, hintPanelX + hintPanelWidth / 2, boxY + 13);
+    ctx.fillText(group.label, hintPanelX + hintPanelWidth / 2, boxY + 13);
     ctx.font = "11px sans-serif";
-    ctx.fillStyle = clueColors[hintClues[i].category];
-    const clueLines = wrapText(hintClues[i].text, hintPanelWidth - 20);
-    for (let lineIndex = 0; lineIndex < clueLines.length; lineIndex += 1) {
-      ctx.fillText(
-        clueLines[lineIndex],
-        hintPanelX + hintPanelWidth / 2,
-        boxY + 32 + lineIndex * 12,
-      );
+    for (let clueIndex = 0; clueIndex < group.clues.length; clueIndex += 1) {
+      ctx.fillStyle = clueColors[group.category];
+      const clueLines = wrapText(group.clues[clueIndex].text, hintPanelWidth - 20);
+      for (let lineIndex = 0; lineIndex < clueLines.length; lineIndex += 1) {
+        ctx.fillText(
+          clueLines[lineIndex],
+          hintPanelX + hintPanelWidth / 2,
+          boxY + 32 + clueIndex * 36 + lineIndex * 12,
+        );
+      }
     }
+    boxY += boxHeight + 8;
   }
 
   // 힌트 목록의 스크롤 바를 그린다.
