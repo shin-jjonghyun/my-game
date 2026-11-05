@@ -148,6 +148,7 @@ const suspects = [
   { x: 690, color: "#8a6b9b", motive: "", location: "", item: "", isHovered: false },
 ];
 let culpritSuspect = null;
+let availableHintClues = [];
 let hintClues = [];
 let choiceResult = "";
 let choiceResultElapsedMs = 0;
@@ -156,12 +157,13 @@ const choiceResultBounceDurationMs = 800;
 const initialChances = 2;
 let remainingChances = initialChances;
 const GameState = {
+  GAME_WAITING: "GameWaiting",
   PLAYING: "Playing",
   CHOICE: "Choice",
   GAME_OVER: "GameOver",
   EXITED: "Exited",
 };
-let gameState = GameState.PLAYING;
+let gameState = GameState.GAME_WAITING;
 
 const clueColors = {
   motive: "#c62828",
@@ -310,6 +312,40 @@ const gameOverButtons = [
     isHovered: false,
   },
 ];
+const hintChoiceButtons = [
+  {
+    x: 120,
+    y: 370,
+    width: 160,
+    height: 60,
+    category: "motive",
+    label: "동기",
+  },
+  {
+    x: 320,
+    y: 370,
+    width: 160,
+    height: 60,
+    category: "location",
+    label: "장소",
+  },
+  {
+    x: 520,
+    y: 370,
+    width: 160,
+    height: 60,
+    category: "item",
+    label: "도구",
+  },
+].map((button) => ({
+  ...button,
+  scale: 1,
+  scaleSpeed: buttons[0].scaleSpeed,
+  animationDurationMs: buttons[0].animationDurationMs,
+  animationElapsedMs: 0,
+  animationTargetScale: 1,
+  isHovered: false,
+}));
 const hintPanelToggleButton = {
   radius: 14,
   scale: 1,
@@ -362,14 +398,14 @@ function initializeGame() {
 
   const targets = [
     { category: "motive", label: "동기", value: culpritSuspect.motive },
-    { category: "item", label: "물건", value: culpritSuspect.item },
+    { category: "item", label: "도구", value: culpritSuspect.item },
     { category: "location", label: "장소", value: culpritSuspect.location },
   ];
   const selectedAdjectives = selectNineWords(adjectiveWords, targets);
   const selectedNouns = selectNineWords(nounWords, targets);
 
   // 범인의 세 속성에 맞는 형용사와 명사를 조합해 힌트 문장을 만든다.
-  hintClues = targets.map((target) => {
+  availableHintClues = targets.map((target) => {
     const adjective = selectedAdjectives.find(
       (word) => word.category === target.category && word.value === target.value,
     );
@@ -388,7 +424,8 @@ function startNewGame() {
   remainingChances = initialChances;
   choiceResult = "";
   choiceResultElapsedMs = 0;
-  gameState = GameState.PLAYING;
+  hintClues = [];
+  gameState = GameState.GAME_WAITING;
   for (const button of gameOverButtons) {
     button.isHovered = false;
     button.scale = 1;
@@ -398,7 +435,28 @@ function startNewGame() {
   for (const suspect of suspects) {
     suspect.isHovered = false;
   }
+  for (const button of hintChoiceButtons) {
+    button.isHovered = false;
+    button.scale = 1;
+    button.animationTargetScale = 1;
+    button.animationElapsedMs = 0;
+  }
   initializeGame();
+}
+
+function chooseStartingHint(category) {
+  const selectedHint = availableHintClues.find(
+    (clue) => clue.category === category,
+  );
+  if (!selectedHint) {
+    throw new Error(`선택한 종류의 힌트를 찾을 수 없습니다: ${category}`);
+  }
+
+  hintClues = [selectedHint];
+  gameState = GameState.PLAYING;
+  for (const button of hintChoiceButtons) {
+    button.isHovered = false;
+  }
 }
 
 function assignRelatedAttributes(attributes) {
@@ -479,22 +537,36 @@ canvas.addEventListener("click", (event) => {
   const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
   const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-  clickRipples.push({    
-    x: mouseX,
-    y: mouseY,
-    radius: 0,
-  });
-
-  // 패널 오른쪽 가장자리의 화살표 버튼을 누르면 펼침 상태를 전환한다.
-  const toggleButtonX = hintPanelX + hintPanelWidth;
-  const toggleButtonY = hintPanelY + 225;
-  const distanceX = mouseX - toggleButtonX;
-  const distanceY = mouseY - toggleButtonY;
   if (
-    distanceX ** 2 + distanceY ** 2 <=
-    (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2
+    gameState === GameState.PLAYING ||
+    gameState === GameState.CHOICE
   ) {
-    isHintPanelExpanded = !isHintPanelExpanded;
+    clickRipples.push({
+      x: mouseX,
+      y: mouseY,
+      radius: 0,
+    });
+  }
+
+  if (gameState === GameState.GAME_WAITING) {
+    const selectedButton = hintChoiceButtons.find((button) =>
+      isPointInsideButton(mouseX, mouseY, button),
+    );
+    if (selectedButton) {
+      chooseStartingHint(selectedButton.category);
+    }
+  } else if (gameState === GameState.PLAYING || gameState === GameState.CHOICE) {
+    // 패널 오른쪽 가장자리의 화살표 버튼을 누르면 펼침 상태를 전환한다.
+    const toggleButtonX = hintPanelX + hintPanelWidth;
+    const toggleButtonY = hintPanelY + 225;
+    const distanceX = mouseX - toggleButtonX;
+    const distanceY = mouseY - toggleButtonY;
+    if (
+      distanceX ** 2 + distanceY ** 2 <=
+      (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2
+    ) {
+      isHintPanelExpanded = !isHintPanelExpanded;
+    }
   }
 
   if (gameState === GameState.GAME_OVER) {
@@ -553,6 +625,11 @@ canvas.addEventListener("mousemove", (event) => {
       gameState === GameState.GAME_OVER &&
       isPointInsideButton(mouseX, mouseY, button);
   }
+  for (const button of hintChoiceButtons) {
+    button.isHovered =
+      gameState === GameState.GAME_WAITING &&
+      isPointInsideButton(mouseX, mouseY, button);
+  }
 
   const toggleButtonX = hintPanelX + hintPanelWidth;
   const toggleButtonY = hintPanelY + 225;
@@ -577,6 +654,9 @@ canvas.addEventListener("mouseleave", () => {
     button.isHovered = false;
   }
   for (const button of gameOverButtons) {
+    button.isHovered = false;
+  }
+  for (const button of hintChoiceButtons) {
     button.isHovered = false;
   }
   hintPanelToggleButton.isHovered = false;
@@ -641,7 +721,7 @@ function drawHintPanel() {
   ctx.textBaseline = "middle";
   ctx.fillText("힌트 목록", hintPanelX + hintPanelWidth / 2, 34);
 
-  // 범인의 장소, 물건, 동기를 가리키는 무작위 힌트를 표시한다.
+  // 시작 시 선택한 범인 속성의 힌트만 표시한다.
   for (let i = 0; i < hintClues.length; i += 1) {
     const boxY = 55 + i * 70;
 
@@ -758,6 +838,20 @@ function drawGameUI() {
     ctx.fillStyle = "#fff";
     ctx.font = "bold 36px sans-serif";
     ctx.fillText("게임을 종료했습니다.", canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  if (gameState === GameState.GAME_WAITING) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 30px sans-serif";
+    ctx.fillText("시작 힌트를 선택하세요", canvas.width / 2, 235);
+    ctx.font = "18px sans-serif";
+    ctx.fillText("동기, 장소, 도구 중 하나의 힌트를 받습니다.", canvas.width / 2, 290);
+    for (const button of hintChoiceButtons) {
+      drawRoundedButton(button);
+    }
     return;
   }
 
@@ -976,6 +1070,7 @@ function gameLoop(frameTime) {
   for (const button of [
     ...buttons,
     ...gameOverButtons,
+    ...hintChoiceButtons,
     hintPanelToggleButton,
     choiceCancelButton,
   ]) {
@@ -1033,7 +1128,8 @@ function gameLoop(frameTime) {
     return;
   }
   if (
-    gameState !== GameState.GAME_OVER
+    gameState === GameState.PLAYING ||
+    gameState === GameState.CHOICE
   ) {
     drawClickRipples();
     drawHintPanel();
