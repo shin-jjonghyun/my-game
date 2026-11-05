@@ -8,7 +8,7 @@ const clickRipples = [];
 
 // 힌트 패널의 접힌 폭, 펼친 폭(접힌 폭의 두 배), 애니메이션 속도를 설정한다.
 const hintPanelX = 20;
-const hintPanelY = 20;
+const hintPanelY = 90;
 const hintPanelCollapsedWidth = 100;
 const hintPanelExpandedWidth = hintPanelCollapsedWidth * 2;
 const hintPanelExpandSpeed = 0.6;
@@ -156,6 +156,7 @@ const choiceResultDurationMs = 2000;
 const choiceResultBounceDurationMs = 800;
 const initialChances = 2;
 let remainingChances = initialChances;
+let currentLevel = 1;
 const initialAdditionalHints = 2;
 let remainingAdditionalHints = initialAdditionalHints;
 let usedAdditionalHintThisLevel = false;
@@ -452,6 +453,7 @@ function initializeGame() {
 }
 
 function startNewGame() {
+  currentLevel = 1;
   remainingChances = initialChances;
   remainingAdditionalHints = initialAdditionalHints;
   usedAdditionalHintThisLevel = false;
@@ -821,7 +823,11 @@ function drawHintPanel() {
   ctx.font = "bold 14px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("힌트 목록", hintPanelX + hintPanelWidth / 2, 34);
+  ctx.fillText(
+    "힌트 목록",
+    hintPanelX + hintPanelWidth / 2,
+    hintPanelY + 14,
+  );
 
   const groupedClues = hintClues.reduce((groups, clue) => {
     let group = groups.find((candidate) => candidate.category === clue.category);
@@ -833,7 +839,7 @@ function drawHintPanel() {
     return groups;
   }, []);
 
-  let boxY = 55;
+  let boxY = hintPanelY + 35;
   for (const group of groupedClues) {
     const boxHeight = 32 + group.clues.length * 36;
 
@@ -860,13 +866,12 @@ function drawHintPanel() {
     }
     boxY += boxHeight + 8;
   }
-
   // 힌트 목록의 스크롤 바를 그린다.
   const scrollbarX = hintPanelX + hintPanelWidth - 8;
   ctx.fillStyle = "#d6cbb7";
-  ctx.fillRect(scrollbarX, 55, 4, 400);
+  ctx.fillRect(scrollbarX, hintPanelY + 35, 4, 400);
   ctx.fillStyle = "#8c806e";
-  ctx.fillRect(scrollbarX, 55, 4, 95);
+  ctx.fillRect(scrollbarX, hintPanelY + 35, 4, 95);
 
   // 화살표 버튼을 패널의 현재 오른쪽 가장자리 중앙에 그린다.
   const toggleButtonX = hintPanelX + hintPanelWidth;
@@ -1016,10 +1021,16 @@ function drawGameUI() {
   ctx.beginPath();
   ctx.ellipse(730, 55, 50, 35, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillRect(hintPanelX, 20, hintPanelCollapsedWidth, 50);
   ctx.fillStyle = "#24202b";
   ctx.font = "13px sans-serif";
   ctx.fillText(`남은 기회: ${remainingChances}`, 400, 55);
   ctx.fillText(`추가 힌트: ${remainingAdditionalHints}`, 730, 55);
+  ctx.fillText(
+    `레벨: ${currentLevel}`,
+    hintPanelX + hintPanelCollapsedWidth / 2,
+    45,
+  );
   // 네 명의 용의자 정보 상자와 인물을 그린다.
   // 네 명의 용의자 정보 상자와 인물을 그린다.
   for (let i = 0; i < suspects.length; i += 1) {
