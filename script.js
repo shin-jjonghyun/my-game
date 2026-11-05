@@ -9,6 +9,7 @@ const clickRipples = [];
 // 힌트 패널의 접힌 폭, 펼친 폭(접힌 폭의 두 배), 애니메이션 속도를 설정한다.
 const hintPanelX = 20;
 const hintPanelY = 90;
+const hintPanelHeight = 360;
 const hintPanelCollapsedWidth = 100;
 const hintPanelExpandedWidth = hintPanelCollapsedWidth * 2;
 const hintPanelExpandSpeed = 0.6;
@@ -80,6 +81,7 @@ const attributeCategories = {
   책: ["두꺼운", "오래된"],
 };
 
+// 속성 이름을 카테고리 목록과 결합하고, 배정에 필요한 카테고리 누락을 검증한다.
 function categorizeAttribute(value) {
   const categories = attributeCategories[value];
   if (!categories || categories.length < 2) {
@@ -88,6 +90,7 @@ function categorizeAttribute(value) {
   return { value, categories };
 }
 
+// 형용사와 명사 데이터에 연결 속성을 복사해 힌트 생성에 사용할 수 있게 한다.
 function categorizeWord(word) {
   return {
     ...word,
@@ -95,6 +98,7 @@ function categorizeWord(word) {
   };
 }
 
+// 용의자별로 무작위 배정할 동기, 장소, 도구 목록을 카테고리 정보와 함께 둔다.
 const motiveTypes = [
   "복수",
   "금전 문제",
@@ -141,6 +145,7 @@ const itemTypes = [
   "트로피",
   "책",
 ].map(categorizeAttribute);
+// 게임 중 표시할 네 용의자의 위치, 색상, 배정 속성, hover 상태를 저장한다.
 const suspects = [
   { x: 270, color: "#5b83a6", motive: "", location: "", item: "", isHovered: false },
   { x: 410, color: "#a65b5b", motive: "", location: "", item: "", isHovered: false },
@@ -161,6 +166,7 @@ const initialAdditionalHints = 2;
 let remainingAdditionalHints = initialAdditionalHints;
 let usedAdditionalHintThisLevel = false;
 let levelRewards = [];
+// 화면 입력과 렌더링 흐름을 구분하는 게임 상태 목록이다.
 const GameState = {
   GAME_WAITING: "GameWaiting",
   HINT_WAITING: "HintWaiting",
@@ -178,7 +184,7 @@ const clueColors = {
   location: "#b8860b",
 };
 
-// 각 단어는 어떤 용의자 속성을 설명하는지 함께 저장한다.
+// 힌트 문구를 만들 때 사용할 형용사·명사 단어와 대상 속성의 연결 정보다.
 const adjectiveWords = [
   { word: "쓰라린", category: "motive", value: "복수" },
   { word: "탐욕스러운", category: "motive", value: "금전 문제" },
@@ -274,7 +280,7 @@ const nounWords = [
   { word: "균형", category: "extra", value: "" },
 ].map(categorizeWord);
 
-// 각 버튼의 원래 위치와 크기, 확대 속도와 애니메이션 시간을 저장한다.
+// 게임 화면의 주요 버튼과 마우스 hover 확대 애니메이션 설정이다.
 const buttonHoverScale = 1.1;
 const buttons = [
   {
@@ -332,6 +338,7 @@ const gameOverButtons = [
     isHovered: false,
   },
 ];
+// 검거 성공 화면에서 표시할 다음 단계 및 나가기 버튼이다.
 const levelClearButtons = [
   {
     x: 220,
@@ -360,6 +367,7 @@ const levelClearButtons = [
     isHovered: false,
   },
 ];
+// 시작 또는 추가 힌트 선택 화면에서 사용할 속성별 버튼이다.
 const hintChoiceButtons = [
   {
     x: 120,
@@ -430,6 +438,7 @@ function shuffle(items) {
   return shuffledItems;
 }
 
+// 새 레벨의 용의자 속성을 무작위 배정하고 범인 및 힌트 대상을 정한다.
 function initializeGame() {
   const assignedMotives = assignRelatedAttributes(motiveTypes);
   const assignedLocations = assignRelatedAttributes(locationTypes);
@@ -452,6 +461,7 @@ function initializeGame() {
   availableHintClues = targets;
 }
 
+// 첫 게임을 시작할 때 레벨 자원과 화면 상태를 초기화한다.
 function startNewGame() {
   currentLevel = 1;
   remainingChances = initialChances;
@@ -480,6 +490,7 @@ function startNewGame() {
   initializeGame();
 }
 
+// 다음 레벨용 용의자와 힌트를 준비하되 현재 레벨의 남은 자원은 유지한다.
 function startNextLevel() {
   currentLevel += 1;
   usedAdditionalHintThisLevel = false;
@@ -508,6 +519,7 @@ function startNextLevel() {
   initializeGame();
 }
 
+// 선택한 범인 속성의 힌트를 목록에 추가하고 실제 게임 상태로 돌아간다.
 function chooseStartingHint(category) {
   const target = availableHintClues.find(
     (clue) => clue.category === category,
@@ -530,12 +542,14 @@ function chooseStartingHint(category) {
   }
 }
 
+// 현재 선택 화면에서 고를 수 있는 힌트 종류만 반환한다.
 function getAvailableHintChoiceButtons() {
   return hintChoiceButtons.filter((button) =>
     availableHintClues.some((clue) => clue.category === button.category),
   );
 }
 
+// 같은 유형으로 이미 받은 힌트와 단어가 겹치지 않는 새 힌트를 만든다.
 function createHintClue(target) {
   const usedAdjectives = new Set(hintClues.map((clue) => clue.adjective));
   const usedNouns = new Set(hintClues.map((clue) => clue.noun));
@@ -566,6 +580,7 @@ function createHintClue(target) {
   };
 }
 
+// 서로 카테고리가 겹치는 속성 쌍을 만들어 용의자들에게 중복 없이 배정한다.
 function assignRelatedAttributes(attributes) {
   if (suspects.length % 2 !== 0) {
     throw new Error("유사 카테고리 배정에는 짝수의 용의자가 필요합니다.");
@@ -581,6 +596,7 @@ function assignRelatedAttributes(attributes) {
     .map((attribute) => attribute.value);
 }
 
+// 가능한 공유 카테고리 쌍을 탐색해 요청된 수만큼 겹치지 않는 짝을 찾는다.
 function findRelatedPairs(attributes, pairCount) {
   if (pairCount === 0) {
     return [];
@@ -617,7 +633,7 @@ function findRelatedPairs(attributes, pairCount) {
   return null;
 }
 
-// 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
+// 캔버스 클릭을 상태별 게임 입력으로 처리하고 클릭 효과를 기록한다.
 canvas.addEventListener("click", (event) => {
   if (event.button !== 0 || gameState === GameState.EXITED) {
     return;
@@ -638,6 +654,7 @@ canvas.addEventListener("click", (event) => {
     });
   }
 
+  // 플레이 중에는 시작/추가 힌트 선택 화면을 열 수 있다.
   if (
     gameState === GameState.GAME_WAITING ||
     gameState === GameState.HINT_WAITING
@@ -651,7 +668,7 @@ canvas.addEventListener("click", (event) => {
   } else if (gameState === GameState.PLAYING || gameState === GameState.CHOICE) {
     // 패널 오른쪽 가장자리의 화살표 버튼을 누르면 펼침 상태를 전환한다.
     const toggleButtonX = hintPanelX + hintPanelWidth;
-    const toggleButtonY = hintPanelY + 225;
+    const toggleButtonY = hintPanelY + hintPanelHeight / 2;
     const distanceX = mouseX - toggleButtonX;
     const distanceY = mouseY - toggleButtonY;
     if (
@@ -662,6 +679,7 @@ canvas.addEventListener("click", (event) => {
     }
   }
 
+  // 결과 화면 버튼, 게임 버튼, 용의자 지목을 현재 상태에 맞게 처리한다.
   if (gameState === GameState.LEVEL_CLEAR) {
     const selectedButton = levelClearButtons.find((button) =>
       isPointInsideButton(mouseX, mouseY, button),
@@ -736,7 +754,7 @@ canvas.addEventListener("click", (event) => {
   }
 });
 
-// 마우스 위치를 캔버스 좌표로 바꾸고 확대된 버튼 영역까지 확인한다.
+// 포인터 위치를 캔버스 좌표로 변환해 현재 화면에서 활성인 요소의 hover를 갱신한다.
 canvas.addEventListener("mousemove", (event) => {
   const rect = canvas.getBoundingClientRect();
   const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
@@ -770,7 +788,7 @@ canvas.addEventListener("mousemove", (event) => {
   }
 
   const toggleButtonX = hintPanelX + hintPanelWidth;
-  const toggleButtonY = hintPanelY + 225;
+  const toggleButtonY = hintPanelY + hintPanelHeight / 2;
   const toggleDistanceX = mouseX - toggleButtonX;
   const toggleDistanceY = mouseY - toggleButtonY;
   hintPanelToggleButton.isHovered =
@@ -829,6 +847,7 @@ function drawBackground() {
   }
 }
 
+// 마우스 좌표가 현재 확대 비율을 반영한 버튼 영역 안에 있는지 판정한다.
 function isPointInsideButton(x, y, button) {
   const scaledWidth = button.width * button.scale;
   const scaledHeight = button.height * button.scale;
@@ -840,6 +859,7 @@ function isPointInsideButton(x, y, button) {
   );
 }
 
+// 클릭 좌표가 용의자 머리 또는 몸통 위에 있는지 판정한다.
 function isPointOverSuspect(x, y, suspect) {
   const headDistanceX = x - suspect.x;
   const headDistanceY = y - 270;
@@ -856,7 +876,7 @@ function isPointOverSuspect(x, y, suspect) {
 function drawHintPanel() {
   // 힌트 목록의 배경 상자와 제목을 그린다.
   ctx.fillStyle = "#f3ead5";
-  ctx.fillRect(hintPanelX, hintPanelY, hintPanelWidth, 450);
+  ctx.fillRect(hintPanelX, hintPanelY, hintPanelWidth, hintPanelHeight);
   ctx.fillStyle = "#29232d";
   ctx.font = "bold 14px sans-serif";
   ctx.textAlign = "center";
@@ -867,6 +887,7 @@ function drawHintPanel() {
     hintPanelY + 14,
   );
 
+  // 같은 유형의 힌트를 한 상자 안에 모아 표시 순서를 유지한다.
   const groupedClues = hintClues.reduce((groups, clue) => {
     let group = groups.find((candidate) => candidate.category === clue.category);
     if (!group) {
@@ -907,13 +928,13 @@ function drawHintPanel() {
   // 힌트 목록의 스크롤 바를 그린다.
   const scrollbarX = hintPanelX + hintPanelWidth - 8;
   ctx.fillStyle = "#d6cbb7";
-  ctx.fillRect(scrollbarX, hintPanelY + 35, 4, 400);
+  ctx.fillRect(scrollbarX, hintPanelY + 35, 4, hintPanelHeight - 50);
   ctx.fillStyle = "#8c806e";
   ctx.fillRect(scrollbarX, hintPanelY + 35, 4, 95);
 
   // 화살표 버튼을 패널의 현재 오른쪽 가장자리 중앙에 그린다.
   const toggleButtonX = hintPanelX + hintPanelWidth;
-  const toggleButtonY = hintPanelY + 225;
+  const toggleButtonY = hintPanelY + hintPanelHeight / 2;
   ctx.save();
   ctx.translate(toggleButtonX, toggleButtonY);
   ctx.scale(hintPanelToggleButton.scale, hintPanelToggleButton.scale);
@@ -927,6 +948,7 @@ function drawHintPanel() {
   ctx.restore();
 }
 
+// 캔버스 글꼴의 실제 폭을 기준으로 문자열을 표시 가능한 줄들로 나눈다.
 function wrapText(text, maxWidth) {
   const lines = [];
   let line = "";
@@ -960,6 +982,7 @@ function wrapText(text, maxWidth) {
   return lines;
 }
 
+// 색이 지정된 텍스트 조각을 글자 단위로 줄바꿈하면서 색상 정보를 보존한다.
 function wrapColoredText(segments, maxWidth) {
   const lines = [[]];
   let lineWidth = 0;
@@ -990,6 +1013,7 @@ function drawGameUI() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
+  // 종료, 클리어, 힌트 선택 상태는 각각 별도 화면으로 표시한다.
   if (gameState === GameState.EXITED) {
     ctx.fillStyle = "#101827";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1051,7 +1075,7 @@ function drawGameUI() {
     return;
   }
 
-  // 남은 기회와 추가 힌트를 표시한다.
+  // 진행 중인 게임의 레벨, 남은 기회, 추가 힌트 수를 표시한다.
   ctx.fillStyle = "#fff";
   ctx.beginPath();
   ctx.ellipse(400, 55, 50, 35, 0, 0, Math.PI * 2);
@@ -1201,6 +1225,7 @@ function hasFinalConsonant(word) {
   );
 }
 
+// 버튼 중심을 기준으로 확대해 둥근 사각형과 라벨을 함께 그린다.
 function drawRoundedButton(button) {
   const { x, y, width, height, label, scale } = button;
   const radius = 10;
@@ -1230,6 +1255,7 @@ function drawRoundedButton(button) {
   ctx.restore();
 }
 
+// 클릭 좌표마다 반지름이 커지고 점차 투명해지는 원형 효과를 그린다.
 function drawClickRipples() {
   for (const ripple of clickRipples) {
     const progress = ripple.radius / clickRippleMaxRadius;
@@ -1242,6 +1268,7 @@ function drawClickRipples() {
   }
 }
 
+// 매 프레임 게임 애니메이션, 버튼 크기, 클릭 효과를 갱신하고 화면을 다시 그린다.
 function gameLoop(frameTime) {
   const deltaTime = previousFrameTime === 0 ? 0 : frameTime - previousFrameTime;
   previousFrameTime = frameTime;
@@ -1343,6 +1370,7 @@ function gameLoop(frameTime) {
   requestAnimationFrame(gameLoop);
 }
 
+// 0~1 진행률을 튕기며 멈추는 감속 곡선 값으로 변환한다.
 function easeOutBounce(progress) {
   const bounceScale = 7.5625;
   const bounceDuration = 2.75;
