@@ -156,8 +156,11 @@ const choiceResultDurationMs = 2000;
 const choiceResultBounceDurationMs = 800;
 const initialChances = 2;
 let remainingChances = initialChances;
+const initialAdditionalHints = 2;
+let remainingAdditionalHints = initialAdditionalHints;
 const GameState = {
   GAME_WAITING: "GameWaiting",
+  HINT_WAITING: "HintWaiting",
   PLAYING: "Playing",
   CHOICE: "Choice",
   GAME_OVER: "GameOver",
@@ -271,7 +274,7 @@ const nounWords = [
 const buttonHoverScale = 1.1;
 const buttons = [
   {
-    x: 350,
+    x: 290,
     y: 500,
     width: 100,
     height: 70,
@@ -284,6 +287,19 @@ const buttons = [
     isHovered: false,
   },
 ];
+const additionalHintButton = {
+  x: 410,
+  y: 500,
+  width: 100,
+  height: 70,
+  label: "추가 힌트",
+  scale: 1,
+  scaleSpeed: buttons[0].scaleSpeed,
+  animationDurationMs: buttons[0].animationDurationMs,
+  animationElapsedMs: 0,
+  animationTargetScale: 1,
+  isHovered: false,
+};
 const gameOverButtons = [
   {
     x: 220,
@@ -422,6 +438,7 @@ function initializeGame() {
 
 function startNewGame() {
   remainingChances = initialChances;
+  remainingAdditionalHints = initialAdditionalHints;
   choiceResult = "";
   choiceResultElapsedMs = 0;
   hintClues = [];
@@ -452,11 +469,33 @@ function chooseStartingHint(category) {
     throw new Error(`선택한 종류의 힌트를 찾을 수 없습니다: ${category}`);
   }
 
-  hintClues = [selectedHint];
+  if (gameState === GameState.GAME_WAITING) {
+    hintClues = [selectedHint];
+  } else if (gameState === GameState.HINT_WAITING) {
+    if (hintClues.some((clue) => clue.category === category)) {
+      return;
+    }
+    hintClues.push(selectedHint);
+  } else {
+    return;
+  }
+
   gameState = GameState.PLAYING;
   for (const button of hintChoiceButtons) {
     button.isHovered = false;
   }
+}
+
+function getAvailableHintChoiceButtons() {
+  if (gameState !== GameState.HINT_WAITING) {
+    return hintChoiceButtons;
+  }
+
+  return hintChoiceButtons.filter(
+    (button) =>
+      !hintClues.some((clue) => clue.category === button.category) &&
+      availableHintClues.some((clue) => clue.category === button.category),
+  );
 }
 
 function assignRelatedAttributes(attributes) {
@@ -548,8 +587,11 @@ canvas.addEventListener("click", (event) => {
     });
   }
 
-  if (gameState === GameState.GAME_WAITING) {
-    const selectedButton = hintChoiceButtons.find((button) =>
+  if (
+    gameState === GameState.GAME_WAITING ||
+    gameState === GameState.HINT_WAITING
+  ) {
+    const selectedButton = getAvailableHintChoiceButtons().find((button) =>
       isPointInsideButton(mouseX, mouseY, button),
     );
     if (selectedButton) {
@@ -587,6 +629,16 @@ canvas.addEventListener("click", (event) => {
     gameState = GameState.CHOICE;
     buttons[0].isHovered = false;
   } else if (
+    gameState === GameState.PLAYING &&
+    isPointInsideButton(mouseX, mouseY, additionalHintButton) &&
+    remainingAdditionalHints > 0 &&
+    getAvailableHintChoiceButtons().length > 0
+  ) {
+    remainingAdditionalHints -= 1;
+    choiceResult = "";
+    gameState = GameState.HINT_WAITING;
+    additionalHintButton.isHovered = false;
+  } else if (
     gameState === GameState.CHOICE &&
     isPointInsideButton(mouseX, mouseY, choiceCancelButton)
   ) {
@@ -620,6 +672,10 @@ canvas.addEventListener("mousemove", (event) => {
       gameState === GameState.PLAYING &&
       isPointInsideButton(mouseX, mouseY, button);
   }
+  additionalHintButton.isHovered =
+    gameState === GameState.PLAYING &&
+    remainingAdditionalHints > 0 &&
+    isPointInsideButton(mouseX, mouseY, additionalHintButton);
   for (const button of gameOverButtons) {
     button.isHovered =
       gameState === GameState.GAME_OVER &&
@@ -627,7 +683,9 @@ canvas.addEventListener("mousemove", (event) => {
   }
   for (const button of hintChoiceButtons) {
     button.isHovered =
-      gameState === GameState.GAME_WAITING &&
+      (gameState === GameState.GAME_WAITING ||
+        gameState === GameState.HINT_WAITING) &&
+      getAvailableHintChoiceButtons().includes(button) &&
       isPointInsideButton(mouseX, mouseY, button);
   }
 
@@ -653,6 +711,7 @@ canvas.addEventListener("mouseleave", () => {
   for (const button of buttons) {
     button.isHovered = false;
   }
+  additionalHintButton.isHovered = false;
   for (const button of gameOverButtons) {
     button.isHovered = false;
   }
@@ -841,15 +900,36 @@ function drawGameUI() {
     return;
   }
 
-  if (gameState === GameState.GAME_WAITING) {
+  if (
+    gameState === GameState.GAME_WAITING ||
+    gameState === GameState.HINT_WAITING
+  ) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#fff";
     ctx.font = "bold 30px sans-serif";
-    ctx.fillText("시작 힌트를 선택하세요", canvas.width / 2, 235);
+    ctx.fillText(
+      gameState === GameState.GAME_WAITING
+        ? "시작 힌트를 선택하세요"
+        : "추가로 받을 힌트를 선택하세요",
+      canvas.width / 2,
+      235,
+    );
     ctx.font = "18px sans-serif";
-    ctx.fillText("동기, 장소, 도구 중 하나의 힌트를 받습니다.", canvas.width / 2, 290);
-    for (const button of hintChoiceButtons) {
+    ctx.fillText(
+      "동기, 장소, 도구 중 하나의 힌트를 받습니다.",
+      canvas.width / 2,
+      290,
+    );
+    if (gameState === GameState.HINT_WAITING) {
+      ctx.font = "15px sans-serif";
+      ctx.fillText(
+        `남은 추가 힌트: ${remainingAdditionalHints}`,
+        canvas.width / 2,
+        325,
+      );
+    }
+    for (const button of getAvailableHintChoiceButtons()) {
       drawRoundedButton(button);
     }
     return;
@@ -866,7 +946,7 @@ function drawGameUI() {
   ctx.fillStyle = "#24202b";
   ctx.font = "13px sans-serif";
   ctx.fillText(`남은 기회: ${remainingChances}`, 400, 55);
-  ctx.fillText("추가 힌트: 2", 730, 55);
+  ctx.fillText(`추가 힌트: ${remainingAdditionalHints}`, 730, 55);
   // 네 명의 용의자 정보 상자와 인물을 그린다.
   // 네 명의 용의자 정보 상자와 인물을 그린다.
   for (let i = 0; i < suspects.length; i += 1) {
@@ -949,6 +1029,7 @@ function drawGameUI() {
     for (const button of buttons) {
       drawRoundedButton(button);
     }
+    drawRoundedButton(additionalHintButton);
   } else if (gameState === GameState.CHOICE) {
     // Choice 상태에서는 지목 안내와 취소 버튼만 표시한다.
     ctx.fillStyle = "#fff";
@@ -1069,6 +1150,7 @@ function gameLoop(frameTime) {
 
   for (const button of [
     ...buttons,
+    additionalHintButton,
     ...gameOverButtons,
     ...hintChoiceButtons,
     hintPanelToggleButton,
