@@ -37,6 +37,64 @@ const stars = [
   { x: 760, y: 350, radius: 2, speed: 0.35 },
 ];
 // 게임에서 사용할 동기, 장소, 물건 종류를 관리한다.
+const attributeCategories = {
+  복수: ["쓰라린", "격렬한"],
+  "금전 문제": ["탐욕스러운", "비밀스러운"],
+  질투: ["쓰라린", "비밀스러운"],
+  "비밀 은폐": ["비밀스러운", "어두운"],
+  권력욕: ["야심 찬", "격렬한"],
+  "오랜 원한": ["쓰라린", "오래된"],
+  협박: ["위협적인", "어두운"],
+  "상속 다툼": ["탐욕스러운", "격렬한"],
+  배신감: ["쓰라린", "비밀스러운"],
+  "명예 훼손": ["모욕적인", "격렬한"],
+  서재: ["고요한", "비밀스러운"],
+  도서관: ["고요한", "오래된"],
+  정원: ["꽃이 핀", "고요한"],
+  주방: ["분주한", "뜨거운"],
+  창고: ["어두운", "먼지 쌓인"],
+  연구실: ["비밀스러운", "어두운"],
+  온실: ["습한", "꽃이 핀"],
+  지하실: ["어두운", "으슥한"],
+  복도: ["긴", "고요한"],
+  응접실: ["화려한", "분주한"],
+  옥상: ["탁 트인", "외딴"],
+  차고: ["어수선한", "먼지 쌓인"],
+  작업실: ["먼지 쌓인", "어수선한"],
+  별관: ["외딴", "으슥한"],
+  음악실: ["울림 있는", "고요한"],
+  촛대: ["묵직한", "쓰라린"],
+  편지칼: ["날카로운", "쓰라린"],
+  독약: ["치명적인", "어두운"],
+  밧줄: ["질긴", "위협적인"],
+  망치: ["무거운", "격렬한"],
+  권총: ["장전된", "위협적인"],
+  약병: ["작은", "비밀스러운"],
+  장식품: ["깨지기 쉬운", "화려한"],
+  와인잔: ["깨끗한", "화려한"],
+  가위: ["날 선", "날카로운"],
+  드라이버: ["단단한", "무거운"],
+  열쇠: ["낡은", "비밀스러운"],
+  향수병: ["향기로운", "화려한"],
+  트로피: ["반짝이는", "야심 찬"],
+  책: ["두꺼운", "오래된"],
+};
+
+function categorizeAttribute(value) {
+  const categories = attributeCategories[value];
+  if (!categories || categories.length < 2) {
+    throw new Error(`속성 카테고리를 찾을 수 없습니다: ${value}`);
+  }
+  return { value, categories };
+}
+
+function categorizeWord(word) {
+  return {
+    ...word,
+    categories: attributeCategories[word.value] || [],
+  };
+}
+
 const motiveTypes = [
   "복수",
   "금전 문제",
@@ -48,7 +106,7 @@ const motiveTypes = [
   "상속 다툼",
   "배신감",
   "명예 훼손",
-];
+].map(categorizeAttribute);
 const locationTypes = [
   "서재",
   "도서관",
@@ -65,7 +123,7 @@ const locationTypes = [
   "작업실",
   "별관",
   "음악실",
-];
+].map(categorizeAttribute);
 const itemTypes = [
   "촛대",
   "편지칼",
@@ -82,7 +140,7 @@ const itemTypes = [
   "향수병",
   "트로피",
   "책",
-];
+].map(categorizeAttribute);
 const suspects = [
   { x: 270, color: "#5b83a6", motive: "", location: "", item: "", isHovered: false },
   { x: 410, color: "#a65b5b", motive: "", location: "", item: "", isHovered: false },
@@ -91,9 +149,17 @@ const suspects = [
 ];
 let culpritSuspect = null;
 let hintClues = [];
+let choiceResult = "";
+let choiceResultElapsedMs = 0;
+const choiceResultDurationMs = 2000;
+const choiceResultBounceDurationMs = 800;
+const initialChances = 2;
+let remainingChances = initialChances;
 const GameState = {
   PLAYING: "Playing",
   CHOICE: "Choice",
+  GAME_OVER: "GameOver",
+  EXITED: "Exited",
 };
 let gameState = GameState.PLAYING;
 
@@ -150,7 +216,7 @@ const adjectiveWords = [
   { word: "낯선", category: "extra", value: "" },
   { word: "조용한", category: "extra", value: "" },
   { word: "불길한", category: "extra", value: "" },
-];
+].map(categorizeWord);
 const nounWords = [
   { word: "파문", category: "motive", value: "복수" },
   { word: "안개", category: "motive", value: "금전 문제" },
@@ -197,7 +263,7 @@ const nounWords = [
   { word: "단계", category: "extra", value: "" },
   { word: "순환", category: "extra", value: "" },
   { word: "균형", category: "extra", value: "" },
-];
+].map(categorizeWord);
 
 // 각 버튼의 원래 위치와 크기, 확대 속도와 애니메이션 시간을 저장한다.
 const buttonHoverScale = 1.1;
@@ -211,6 +277,34 @@ const buttons = [
     scale: 1,
     scaleSpeed: 0.0015,
     animationDurationMs: 60,
+    animationElapsedMs: 0,
+    animationTargetScale: 1,
+    isHovered: false,
+  },
+];
+const gameOverButtons = [
+  {
+    x: 220,
+    y: 370,
+    width: 160,
+    height: 60,
+    label: "다시 하기",
+    scale: 1,
+    scaleSpeed: buttons[0].scaleSpeed,
+    animationDurationMs: buttons[0].animationDurationMs,
+    animationElapsedMs: 0,
+    animationTargetScale: 1,
+    isHovered: false,
+  },
+  {
+    x: 420,
+    y: 370,
+    width: 160,
+    height: 60,
+    label: "게임 종료",
+    scale: 1,
+    scaleSpeed: buttons[0].scaleSpeed,
+    animationDurationMs: buttons[0].animationDurationMs,
     animationElapsedMs: 0,
     animationTargetScale: 1,
     isHovered: false,
@@ -253,14 +347,14 @@ function shuffle(items) {
 }
 
 function initializeGame() {
-  const shuffledMotives = shuffle(motiveTypes);
-  const shuffledLocations = shuffle(locationTypes);
-  const shuffledItems = shuffle(itemTypes);
+  const assignedMotives = assignRelatedAttributes(motiveTypes);
+  const assignedLocations = assignRelatedAttributes(locationTypes);
+  const assignedItems = assignRelatedAttributes(itemTypes);
 
   for (let i = 0; i < suspects.length; i += 1) {
-    suspects[i].motive = shuffledMotives[i];
-    suspects[i].location = shuffledLocations[i];
-    suspects[i].item = shuffledItems[i];
+    suspects[i].motive = assignedMotives[i];
+    suspects[i].location = assignedLocations[i];
+    suspects[i].item = assignedItems[i];
   }
 
   // 게임마다 용의자 한 명을 범인으로 지정해 내부 변수에만 보관한다.
@@ -290,6 +384,74 @@ function initializeGame() {
   });
 }
 
+function startNewGame() {
+  remainingChances = initialChances;
+  choiceResult = "";
+  choiceResultElapsedMs = 0;
+  gameState = GameState.PLAYING;
+  for (const button of gameOverButtons) {
+    button.isHovered = false;
+    button.scale = 1;
+    button.animationTargetScale = 1;
+    button.animationElapsedMs = 0;
+  }
+  for (const suspect of suspects) {
+    suspect.isHovered = false;
+  }
+  initializeGame();
+}
+
+function assignRelatedAttributes(attributes) {
+  if (suspects.length % 2 !== 0) {
+    throw new Error("유사 카테고리 배정에는 짝수의 용의자가 필요합니다.");
+  }
+
+  const relatedPairs = findRelatedPairs(attributes, suspects.length / 2);
+  if (!relatedPairs) {
+    throw new Error("용의자에게 배정할 유사 카테고리 조합을 찾을 수 없습니다.");
+  }
+
+  return shuffle(relatedPairs.flatMap((pair) => pair.values))
+    .slice(0, suspects.length)
+    .map((attribute) => attribute.value);
+}
+
+function findRelatedPairs(attributes, pairCount) {
+  if (pairCount === 0) {
+    return [];
+  }
+
+  const candidatePairs = [];
+  for (let firstIndex = 0; firstIndex < attributes.length; firstIndex += 1) {
+    for (
+      let secondIndex = firstIndex + 1;
+      secondIndex < attributes.length;
+      secondIndex += 1
+    ) {
+      const first = attributes[firstIndex];
+      const second = attributes[secondIndex];
+      const hasSharedCategory = first.categories.some((category) =>
+        second.categories.includes(category),
+      );
+      if (hasSharedCategory) {
+        candidatePairs.push({ values: [first, second] });
+      }
+    }
+  }
+
+  for (const pair of shuffle(candidatePairs)) {
+    const remainingAttributes = attributes.filter(
+      (attribute) => !pair.values.includes(attribute),
+    );
+    const remainingPairs = findRelatedPairs(remainingAttributes, pairCount - 1);
+    if (remainingPairs) {
+      return [pair, ...remainingPairs];
+    }
+  }
+
+  return null;
+}
+
 function selectNineWords(words, targets) {
   const requiredWords = targets.map((target) => {
     const word = words.find(
@@ -309,7 +471,7 @@ function selectNineWords(words, targets) {
 
 // 왼쪽 클릭 위치를 캔버스 좌표로 저장해 원형 확산 효과를 시작한다.
 canvas.addEventListener("click", (event) => {
-  if (event.button !== 0) {
+  if (event.button !== 0 || gameState === GameState.EXITED) {
     return;
   }
 
@@ -317,7 +479,7 @@ canvas.addEventListener("click", (event) => {
   const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
   const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-  clickRipples.push({
+  clickRipples.push({    
     x: mouseX,
     y: mouseY,
     radius: 0,
@@ -335,10 +497,21 @@ canvas.addEventListener("click", (event) => {
     isHintPanelExpanded = !isHintPanelExpanded;
   }
 
-  if (
+  if (gameState === GameState.GAME_OVER) {
+    const selectedButton = gameOverButtons.find((button) =>
+      isPointInsideButton(mouseX, mouseY, button),
+    );
+    if (selectedButton === gameOverButtons[0]) {
+      startNewGame();
+    } else if (selectedButton === gameOverButtons[1]) {
+      choiceResult = "";
+      gameState = GameState.EXITED;
+    }
+  } else if (
     gameState === GameState.PLAYING &&
     isPointInsideButton(mouseX, mouseY, buttons[0])
   ) {
+    choiceResult = "";
     gameState = GameState.CHOICE;
     buttons[0].isHovered = false;
   } else if (
@@ -347,6 +520,20 @@ canvas.addEventListener("click", (event) => {
   ) {
     gameState = GameState.PLAYING;
     choiceCancelButton.isHovered = false;
+  } else if (gameState === GameState.CHOICE) {
+    const selectedSuspect = suspects.find((suspect) =>
+      isPointOverSuspect(mouseX, mouseY, suspect),
+    );
+    if (selectedSuspect) {
+      choiceResult = selectedSuspect === culpritSuspect ? "정답" : "오답";
+      choiceResultElapsedMs = 0;
+      if (choiceResult === "오답") {
+        remainingChances -= 1;
+        if (remainingChances === 0) {
+          gameState = GameState.GAME_OVER;
+        }
+      }
+    }
   }
 });
 
@@ -359,6 +546,11 @@ canvas.addEventListener("mousemove", (event) => {
   for (const button of buttons) {
     button.isHovered =
       gameState === GameState.PLAYING &&
+      isPointInsideButton(mouseX, mouseY, button);
+  }
+  for (const button of gameOverButtons) {
+    button.isHovered =
+      gameState === GameState.GAME_OVER &&
       isPointInsideButton(mouseX, mouseY, button);
   }
 
@@ -382,6 +574,9 @@ canvas.addEventListener("mousemove", (event) => {
 // 캔버스를 벗어나면 확대 상태를 해제해 버튼 크기를 원래대로 돌린다.
 canvas.addEventListener("mouseleave", () => {
   for (const button of buttons) {
+    button.isHovered = false;
+  }
+  for (const button of gameOverButtons) {
     button.isHovered = false;
   }
   hintPanelToggleButton.isHovered = false;
@@ -557,6 +752,15 @@ function drawGameUI() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
+  if (gameState === GameState.EXITED) {
+    ctx.fillStyle = "#101827";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 36px sans-serif";
+    ctx.fillText("게임을 종료했습니다.", canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
   // 남은 기회와 추가 힌트를 표시한다.
   ctx.fillStyle = "#fff";
   ctx.beginPath();
@@ -567,7 +771,7 @@ function drawGameUI() {
   ctx.fill();
   ctx.fillStyle = "#24202b";
   ctx.font = "13px sans-serif";
-  ctx.fillText("남은 기회: 2", 400, 55);
+  ctx.fillText(`남은 기회: ${remainingChances}`, 400, 55);
   ctx.fillText("추가 힌트: 2", 730, 55);
   // 네 명의 용의자 정보 상자와 인물을 그린다.
   // 네 명의 용의자 정보 상자와 인물을 그린다.
@@ -634,12 +838,24 @@ function drawGameUI() {
     }
   }
 
-  if (gameState === GameState.PLAYING) {
+  if (gameState === GameState.GAME_OVER) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ff8a80";
+    ctx.font = "bold 42px sans-serif";
+    ctx.fillText("게임 오버", canvas.width / 2, 270);
+    ctx.fillStyle = "#fff";
+    ctx.font = "18px sans-serif";
+    ctx.fillText("남은 기회를 모두 사용했습니다.", canvas.width / 2, 320);
+    for (const button of gameOverButtons) {
+      drawRoundedButton(button);
+    }
+  } else if (gameState === GameState.PLAYING) {
     // Playing 상태에서만 범인 지목 버튼을 표시한다.
     for (const button of buttons) {
       drawRoundedButton(button);
     }
-  } else {
+  } else if (gameState === GameState.CHOICE) {
     // Choice 상태에서는 지목 안내와 취소 버튼만 표시한다.
     ctx.fillStyle = "#fff";
     ctx.font = "bold 18px sans-serif";
@@ -662,6 +878,18 @@ function drawGameUI() {
     ctx.font = "bold 28px sans-serif";
     ctx.fillText("X", 0, 0);
     ctx.restore();
+  }
+
+  if (choiceResult) {
+    const animationProgress = Math.min(
+      choiceResultElapsedMs / choiceResultBounceDurationMs,
+      1,
+    );
+    const bounceProgress = easeOutBounce(animationProgress);
+    const resultY = -30 + (105 + 30) * bounceProgress;
+    ctx.fillStyle = choiceResult === "정답" ? "#8de38d" : "#ff8a80";
+    ctx.font = "bold 26px sans-serif";
+    ctx.fillText(choiceResult, canvas.width / 2, resultY);
   }
 }
 
@@ -721,6 +949,14 @@ function gameLoop(frameTime) {
   const deltaTime = previousFrameTime === 0 ? 0 : frameTime - previousFrameTime;
   previousFrameTime = frameTime;
 
+  if (choiceResult) {
+    choiceResultElapsedMs += deltaTime;
+    if (choiceResultElapsedMs >= choiceResultDurationMs) {
+      choiceResult = "";
+      choiceResultElapsedMs = 0;
+    }
+  }
+
   // 지우기: 이전 프레임을 지운다.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -739,6 +975,7 @@ function gameLoop(frameTime) {
 
   for (const button of [
     ...buttons,
+    ...gameOverButtons,
     hintPanelToggleButton,
     choiceCancelButton,
   ]) {
@@ -792,10 +1029,37 @@ function gameLoop(frameTime) {
   // 배경과 다른 UI를 그린 뒤 힌트 패널을 마지막에 그려 항상 위에 표시한다.
   drawBackground();
   drawGameUI();
-  drawClickRipples();
-  drawHintPanel();
+  if (gameState === GameState.EXITED) {
+    return;
+  }
+  if (
+    gameState !== GameState.GAME_OVER
+  ) {
+    drawClickRipples();
+    drawHintPanel();
+  }
 
   requestAnimationFrame(gameLoop);
+}
+
+function easeOutBounce(progress) {
+  const bounceScale = 7.5625;
+  const bounceDuration = 2.75;
+
+  if (progress < 1 / bounceDuration) {
+    return bounceScale * progress ** 2;
+  }
+  if (progress < 2 / bounceDuration) {
+    const adjustedProgress = progress - 1.5 / bounceDuration;
+    return bounceScale * adjustedProgress ** 2 + 0.75;
+  }
+  if (progress < 2.5 / bounceDuration) {
+    const adjustedProgress = progress - 2.25 / bounceDuration;
+    return bounceScale * adjustedProgress ** 2 + 0.9375;
+  }
+
+  const adjustedProgress = progress - 2.625 / bounceDuration;
+  return bounceScale * adjustedProgress ** 2 + 0.984375;
 }
 
 initializeGame();
