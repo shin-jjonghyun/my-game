@@ -158,11 +158,14 @@ const initialChances = 2;
 let remainingChances = initialChances;
 const initialAdditionalHints = 2;
 let remainingAdditionalHints = initialAdditionalHints;
+let usedAdditionalHintThisLevel = false;
+let levelRewards = [];
 const GameState = {
   GAME_WAITING: "GameWaiting",
   HINT_WAITING: "HintWaiting",
   PLAYING: "Playing",
   CHOICE: "Choice",
+  LEVEL_CLEAR: "LevelClear",
   GAME_OVER: "GameOver",
   EXITED: "Exited",
 };
@@ -328,6 +331,34 @@ const gameOverButtons = [
     isHovered: false,
   },
 ];
+const levelClearButtons = [
+  {
+    x: 220,
+    y: 370,
+    width: 160,
+    height: 60,
+    label: "다음 단계",
+    scale: 1,
+    scaleSpeed: buttons[0].scaleSpeed,
+    animationDurationMs: buttons[0].animationDurationMs,
+    animationElapsedMs: 0,
+    animationTargetScale: 1,
+    isHovered: false,
+  },
+  {
+    x: 420,
+    y: 370,
+    width: 160,
+    height: 60,
+    label: "나가기",
+    scale: 1,
+    scaleSpeed: buttons[0].scaleSpeed,
+    animationDurationMs: buttons[0].animationDurationMs,
+    animationElapsedMs: 0,
+    animationTargetScale: 1,
+    isHovered: false,
+  },
+];
 const hintChoiceButtons = [
   {
     x: 120,
@@ -423,6 +454,8 @@ function initializeGame() {
 function startNewGame() {
   remainingChances = initialChances;
   remainingAdditionalHints = initialAdditionalHints;
+  usedAdditionalHintThisLevel = false;
+  levelRewards = [];
   choiceResult = "";
   choiceResultElapsedMs = 0;
   hintClues = [];
@@ -623,6 +656,7 @@ canvas.addEventListener("click", (event) => {
     getAvailableHintChoiceButtons().length > 0
   ) {
     remainingAdditionalHints -= 1;
+    usedAdditionalHintThisLevel = true;
     choiceResult = "";
     gameState = GameState.HINT_WAITING;
     additionalHintButton.isHovered = false;
@@ -639,7 +673,20 @@ canvas.addEventListener("click", (event) => {
     if (selectedSuspect) {
       choiceResult = selectedSuspect === culpritSuspect ? "정답" : "오답";
       choiceResultElapsedMs = 0;
-      if (choiceResult === "오답") {
+      if (choiceResult === "정답") {
+        choiceResult = "";
+        const caughtOnFirstAttempt = remainingChances === initialChances;
+        levelRewards = [];
+        if (!usedAdditionalHintThisLevel) {
+          remainingChances += 1;
+          levelRewards.push("추가 힌트를 사용하지 않아 남은 기회 +1");
+        }
+        if (caughtOnFirstAttempt) {
+          remainingAdditionalHints += 1;
+          levelRewards.push("한 번에 범인을 맞혀 추가 힌트 +1");
+        }
+        gameState = GameState.LEVEL_CLEAR;
+      } else {
         remainingChances -= 1;
         if (remainingChances === 0) {
           gameState = GameState.GAME_OVER;
@@ -667,6 +714,11 @@ canvas.addEventListener("mousemove", (event) => {
   for (const button of gameOverButtons) {
     button.isHovered =
       gameState === GameState.GAME_OVER &&
+      isPointInsideButton(mouseX, mouseY, button);
+  }
+  for (const button of levelClearButtons) {
+    button.isHovered =
+      gameState === GameState.LEVEL_CLEAR &&
       isPointInsideButton(mouseX, mouseY, button);
   }
   for (const button of hintChoiceButtons) {
@@ -701,6 +753,9 @@ canvas.addEventListener("mouseleave", () => {
   }
   additionalHintButton.isHovered = false;
   for (const button of gameOverButtons) {
+    button.isHovered = false;
+  }
+  for (const button of levelClearButtons) {
     button.isHovered = false;
   }
   for (const button of hintChoiceButtons) {
@@ -898,6 +953,23 @@ function drawGameUI() {
     ctx.fillStyle = "#fff";
     ctx.font = "bold 36px sans-serif";
     ctx.fillText("게임을 종료했습니다.", canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  if (gameState === GameState.LEVEL_CLEAR) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#8de38d";
+    ctx.font = "bold 46px sans-serif";
+    ctx.fillText("검거 성공!", canvas.width / 2, 220);
+    ctx.fillStyle = "#fff";
+    ctx.font = "18px sans-serif";
+    for (let i = 0; i < levelRewards.length; i += 1) {
+      ctx.fillText(levelRewards[i], canvas.width / 2, 275 + i * 30);
+    }
+    for (const button of levelClearButtons) {
+      drawRoundedButton(button);
+    }
     return;
   }
 
@@ -1153,6 +1225,7 @@ function gameLoop(frameTime) {
     ...buttons,
     additionalHintButton,
     ...gameOverButtons,
+    ...levelClearButtons,
     ...hintChoiceButtons,
     hintPanelToggleButton,
     choiceCancelButton,
