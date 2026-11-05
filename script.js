@@ -480,6 +480,34 @@ function startNewGame() {
   initializeGame();
 }
 
+function startNextLevel() {
+  currentLevel += 1;
+  usedAdditionalHintThisLevel = false;
+  levelRewards = [];
+  choiceResult = "";
+  choiceResultElapsedMs = 0;
+  hintClues = [];
+  gameState = GameState.GAME_WAITING;
+
+  for (const button of levelClearButtons) {
+    button.isHovered = false;
+    button.scale = 1;
+    button.animationTargetScale = 1;
+    button.animationElapsedMs = 0;
+  }
+  for (const button of hintChoiceButtons) {
+    button.isHovered = false;
+    button.scale = 1;
+    button.animationTargetScale = 1;
+    button.animationElapsedMs = 0;
+  }
+  for (const suspect of suspects) {
+    suspect.isHovered = false;
+  }
+
+  initializeGame();
+}
+
 function chooseStartingHint(category) {
   const target = availableHintClues.find(
     (clue) => clue.category === category,
@@ -634,7 +662,17 @@ canvas.addEventListener("click", (event) => {
     }
   }
 
-  if (gameState === GameState.GAME_OVER) {
+  if (gameState === GameState.LEVEL_CLEAR) {
+    const selectedButton = levelClearButtons.find((button) =>
+      isPointInsideButton(mouseX, mouseY, button),
+    );
+    if (selectedButton === levelClearButtons[0]) {
+      startNextLevel();
+    } else if (selectedButton === levelClearButtons[1]) {
+      choiceResult = "";
+      gameState = GameState.EXITED;
+    }
+  } else if (gameState === GameState.GAME_OVER) {
     const selectedButton = gameOverButtons.find((button) =>
       isPointInsideButton(mouseX, mouseY, button),
     );
