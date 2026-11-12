@@ -80,6 +80,13 @@ const attributeCategories = {
   트로피: ["반짝이는", "야심 찬"],
   책: ["두꺼운", "오래된"],
 };
+// 단어별 우선도는 이 표에서 조정하고, 미지정 단어는 기본 우선도 1을 사용한다.
+const wordPriorities = {
+  쓰라린: 3,
+  "야심 찬": 2,
+  오래된: 1,
+};
+const defaultWordPriority = 1;
 
 // 속성 이름을 카테고리 목록과 결합하고, 배정에 필요한 카테고리 누락을 검증한다.
 function categorizeAttribute(value) {
@@ -95,6 +102,7 @@ function categorizeWord(word) {
   return {
     ...word,
     categories: attributeCategories[word.value] || [],
+    priority: wordPriorities[word.word] ?? defaultWordPriority,
   };
 }
 
@@ -153,6 +161,7 @@ const suspects = [
   { x: 690, color: "#8a6b9b", motive: "", location: "", item: "", isHovered: false },
 ];
 let culpritSuspect = null;
+let wrongGuessSuspects = [];
 let availableHintClues = [];
 let hintClues = [];
 let choiceResult = "";
@@ -465,6 +474,7 @@ function initializeGame() {
 // 첫 게임을 시작할 때 레벨 자원과 화면 상태를 초기화한다.
 function startNewGame() {
   currentLevel = 1;
+  wrongGuessSuspects = [];
   remainingChances = initialChances;
   remainingAdditionalHints = initialAdditionalHints;
   usedAdditionalHintThisLevel = false;
@@ -495,6 +505,7 @@ function startNewGame() {
 // 다음 레벨용 용의자와 힌트를 준비하되 현재 레벨의 남은 자원은 유지한다.
 function startNextLevel() {
   currentLevel += 1;
+  wrongGuessSuspects = [];
   usedAdditionalHintThisLevel = false;
   hadWrongGuessThisLevel = false;
   levelRewards = [];
@@ -565,7 +576,39 @@ function createHintClue(target) {
       word.categories.some((category) => targetCategories.includes(category)),
     );
     const candidateWords = relatedWords.length > 0 ? relatedWords : categoryWords;
-    return shuffle(candidateWords)[0];
+    const wrongGuessValues = wrongGuessSuspects.flatMap((suspect) => [
+      suspect.motive,
+      suspect.location,
+      suspect.item,
+    ]);
+    const eligibleWords = candidateWords.filter((candidate) => {
+      const relatedWrongWords = words.filter(
+        (word) =>
+          wrongGuessValues.includes(word.value) &&
+          word.categories.some((category) =>
+            candidate.categories.includes(category),
+          ),
+      );
+      const requiredPriority = relatedWrongWords.reduce(
+        (priority, word) => Math.max(priority, word.priority),
+        0,
+      );
+      return candidate.priority >= requiredPriority;
+    });
+    if (candidateWords.length === 0) {
+      return undefined;
+    }
+    if (eligibleWords.length === 0) {
+      throw new Error(
+        `우선도 조건을 만족하는 힌트 단어가 없습니다: ${target.category}`,
+      );
+    }
+    const highestPriority = Math.max(
+      ...eligibleWords.map((word) => word.priority),
+    );
+    return shuffle(
+      eligibleWords.filter((word) => word.priority === highestPriority),
+    )[0];
   };
   const adjective = findUnusedWord(adjectiveWords, usedAdjectives);
   const noun = findUnusedWord(nounWords, usedNouns);
@@ -751,6 +794,9 @@ canvas.addEventListener("click", (event) => {
         gameState = GameState.LEVEL_CLEAR;
       } else {
         hadWrongGuessThisLevel = true;
+        if (!wrongGuessSuspects.includes(selectedSuspect)) {
+          wrongGuessSuspects.push(selectedSuspect);
+        }
         remainingChances -= 1;
         if (remainingChances === 0) {
           gameState = GameState.GAME_OVER;
