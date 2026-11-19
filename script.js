@@ -297,6 +297,10 @@ const buttonHoverScale = 1.1;
 // 힌트 펼치기·선택 취소 버튼을 제외한 공통 버튼 이미지 경로다.
 // index.html 기준 상대 경로로 작성한다. 예: "images/buttons/common.png"
 const buttonImagePath = "images/buttons/common.png";
+// 힌트 펼치기 이미지 경로는 index.html 기준 상대 경로다.
+const hintPanelToggleImagePath = "images/buttons/hintlist_open.png";
+// 선택 취소 버튼 이미지 경로는 index.html 기준 상대 경로다.
+const choiceCancelImagePath = "images/buttons/cancle.png";
 const buttonImageCache = new Map();
 const buttons = [
   {
@@ -441,7 +445,7 @@ const hintChoiceButtons = [
 }));
 const hintPanelToggleButton = {
   radius: 14,
-  imageSrc: "",
+  imageSrc: hintPanelToggleImagePath,
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -454,7 +458,7 @@ const choiceCancelButton = {
   y: 520,
   width: 50,
   height: 50,
-  imageSrc: "",
+  imageSrc: choiceCancelImagePath,
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -1036,6 +1040,7 @@ function drawHintPanel() {
       toggleButtonY - hintPanelToggleButton.radius,
       hintPanelToggleButton.radius * 2,
       hintPanelToggleButton.radius * 2,
+      isHintPanelExpanded,
     )
   ) {
     ctx.save();
@@ -1045,9 +1050,6 @@ function drawHintPanel() {
     ctx.arc(0, 0, hintPanelToggleButton.radius, 0, Math.PI * 2);
     ctx.fillStyle = "#8c806e";
     ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 18px sans-serif";
-    ctx.fillText(isHintPanelExpanded ? "<" : ">", 0, 0);
     ctx.restore();
   }
 }
@@ -1388,6 +1390,7 @@ function drawButtonImage(
   y = button.y,
   width = button.width,
   height = button.height,
+  flipHorizontally = false,
 ) {
   if (!button.imageSrc) {
     return false;
@@ -1409,7 +1412,10 @@ function drawButtonImage(
 
   ctx.save();
   ctx.translate(x + width / 2, y + height / 2);
-  ctx.scale(button.scale, button.scale);
+  ctx.scale(
+    button.scale * (flipHorizontally ? -1 : 1),
+    button.scale,
+  );
   ctx.drawImage(image, -width / 2, -height / 2, width, height);
   ctx.restore();
   return true;
