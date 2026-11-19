@@ -6,12 +6,12 @@ const clickRippleMaxRadius = 30;
 const clickRippleSpeed = 0.25;
 const clickRipples = [];
 
-// 힌트 패널의 접힌 폭, 펼친 폭(접힌 폭의 두 배), 애니메이션 속도를 설정한다.
+// 힌트 패널의 접힌 폭, 펼친 폭(접힌 폭의 1.5배), 애니메이션 속도를 설정한다.
 const hintPanelX = 20;
 const hintPanelY = 90;
 const hintPanelHeight = 360;
-const hintPanelCollapsedWidth = 100;
-const hintPanelExpandedWidth = hintPanelCollapsedWidth * 2;
+const hintPanelCollapsedWidth = 130;
+const hintPanelExpandedWidth = hintPanelCollapsedWidth * 1.5;
 const hintPanelExpandSpeed = 0.6;
 let hintPanelWidth = hintPanelCollapsedWidth;
 let isHintPanelExpanded = false;
@@ -301,7 +301,17 @@ const buttonImagePath = "images/buttons/common.png";
 const hintPanelToggleImagePath = "images/buttons/hintlist_open.png";
 // 선택 취소 버튼 이미지 경로는 index.html 기준 상대 경로다.
 const choiceCancelImagePath = "images/buttons/cancle.png";
+// HUD 이미지 경로는 index.html 기준 상대 경로다.
+const levelImagePath = "images/ui/level.png";
+const resourcesImagePath = "images/ui/resources.png";
+// 힌트 패널과 개별 힌트 카드 이미지 경로는 index.html 기준 상대 경로다.
+const hintListImagePath = "images/ui/hintList.png";
+const hintImagePath = "images/ui/hint.png";
 const buttonImageCache = new Map();
+const levelUiImage = { imageSrc: levelImagePath, scale: 1 };
+const resourcesUiImage = { imageSrc: resourcesImagePath, scale: 1 };
+const hintListUiImage = { imageSrc: hintListImagePath, scale: 1 };
+const hintUiImage = { imageSrc: hintImagePath, scale: 1 };
 const buttons = [
   {
     x: 290,
@@ -972,18 +982,22 @@ function isPointOverSuspect(x, y, suspect) {
 }
 
 function drawHintPanel() {
-  // 힌트 목록의 배경 상자와 제목을 그린다.
-  ctx.fillStyle = "#f3ead5";
-  ctx.fillRect(hintPanelX, hintPanelY, hintPanelWidth, hintPanelHeight);
-  ctx.fillStyle = "#29232d";
-  ctx.font = "bold 14px sans-serif";
+  // 힌트 목록 이미지가 로드되지 않은 동안에는 기존 배경을 표시한다.
+  if (
+    !drawButtonImage(
+      hintListUiImage,
+      hintPanelX,
+      hintPanelY,
+      hintPanelWidth,
+      hintPanelHeight,
+    )
+  ) {
+    ctx.fillStyle = "#f3ead5";
+    ctx.fillRect(hintPanelX, hintPanelY, hintPanelWidth, hintPanelHeight);
+  }
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(
-    "힌트 목록",
-    hintPanelX + hintPanelWidth / 2,
-    hintPanelY + 14,
-  );
 
   // 같은 유형의 힌트를 한 상자 안에 모아 표시 순서를 유지한다.
   const groupedClues = hintClues.reduce((groups, clue) => {
@@ -996,19 +1010,21 @@ function drawHintPanel() {
     return groups;
   }, []);
 
-  let boxY = hintPanelY + 35;
+  let boxY = hintPanelY + 45;
   for (const group of groupedClues) {
     const boxHeight = 32 + group.clues.length * 36;
 
-    ctx.fillStyle = "#fffaf0";
-    ctx.fillRect(25, boxY, hintPanelWidth - 10, boxHeight);
-    ctx.strokeStyle = "#b7aa91";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(25, boxY, hintPanelWidth - 10, boxHeight);
+    if (!drawButtonImage(hintUiImage, 25, boxY, hintPanelWidth - 10, boxHeight)) {
+      ctx.fillStyle = "#fffaf0";
+      ctx.fillRect(25, boxY, hintPanelWidth - 10, boxHeight);
+      ctx.strokeStyle = "#b7aa91";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(25, boxY, hintPanelWidth - 10, boxHeight);
+    }
 
     ctx.fillStyle = clueColors[group.category];
     ctx.font = "bold 12px sans-serif";
-    ctx.fillText(group.label, hintPanelX + hintPanelWidth / 2, boxY + 13);
+    ctx.fillText(group.label, hintPanelX + hintPanelWidth / 2, boxY + 28);
     ctx.font = "11px sans-serif";
     for (let clueIndex = 0; clueIndex < group.clues.length; clueIndex += 1) {
       ctx.fillStyle = clueColors[group.category];
@@ -1017,19 +1033,12 @@ function drawHintPanel() {
         ctx.fillText(
           clueLines[lineIndex],
           hintPanelX + hintPanelWidth / 2,
-          boxY + 32 + clueIndex * 36 + lineIndex * 12,
+          boxY + 47 + clueIndex * 36 + lineIndex * 12,
         );
       }
     }
     boxY += boxHeight + 8;
   }
-  // 힌트 목록의 스크롤 바를 그린다.
-  const scrollbarX = hintPanelX + hintPanelWidth - 8;
-  ctx.fillStyle = "#d6cbb7";
-  ctx.fillRect(scrollbarX, hintPanelY + 35, 4, hintPanelHeight - 50);
-  ctx.fillStyle = "#8c806e";
-  ctx.fillRect(scrollbarX, hintPanelY + 35, 4, 95);
-
   // 화살표 버튼을 패널의 현재 오른쪽 가장자리 중앙에 그린다.
   const toggleButtonX = hintPanelX + hintPanelWidth;
   const toggleButtonY = hintPanelY + hintPanelHeight / 2;
@@ -1194,21 +1203,27 @@ function drawGameUI() {
 
   // 진행 중인 게임의 레벨, 남은 기회, 추가 힌트 수를 표시한다.
   ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.ellipse(400, 55, 50, 35, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(730, 55, 50, 35, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(hintPanelX, 20, hintPanelCollapsedWidth, 50);
+  if (!drawButtonImage(levelUiImage, 20, 30, 160, 40)) {
+    ctx.fillRect(20, 30, 160, 40);
+  }
+  if (!drawButtonImage(resourcesUiImage, 320, 20, 160, 60)) {
+    ctx.beginPath();
+    ctx.ellipse(400, 50, 80, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (!drawButtonImage(resourcesUiImage, 600, 20, 160, 60)) {
+    ctx.beginPath();
+    ctx.ellipse(680, 50, 80, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.fillStyle = "#24202b";
   ctx.font = "13px sans-serif";
   ctx.fillText(`남은 기회: ${remainingChances}`, 400, 55);
-  ctx.fillText(`추가 힌트: ${remainingAdditionalHints}`, 730, 55);
+  ctx.fillText(`추가 힌트: ${remainingAdditionalHints}`, 680, 55);
   ctx.fillText(
     `레벨: ${currentLevel}`,
-    hintPanelX + hintPanelCollapsedWidth / 2,
-    45,
+    100,
+    50,
   );
   // 네 명의 용의자 정보 상자와 인물을 그린다.
   // 네 명의 용의자 정보 상자와 인물을 그린다.
