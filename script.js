@@ -294,6 +294,10 @@ const nounWords = [
 
 // 게임 화면의 주요 버튼과 마우스 hover 확대 애니메이션 설정이다.
 const buttonHoverScale = 1.1;
+// 힌트 펼치기·선택 취소 버튼을 제외한 공통 버튼 이미지 경로다.
+// index.html 기준 상대 경로로 작성한다. 예: "images/buttons/common.png"
+const buttonImagePath = "images/buttons/common.png";
+const buttonImageCache = new Map();
 const buttons = [
   {
     x: 290,
@@ -301,6 +305,7 @@ const buttons = [
     width: 100,
     height: 70,
     label: "범인 잡기",
+    imageSrc: buttonImagePath,
     scale: 1,
     scaleSpeed: 0.0015,
     animationDurationMs: 60,
@@ -315,6 +320,7 @@ const titleStartButton = {
   width: 200,
   height: 64,
   label: "시작",
+  imageSrc: buttonImagePath,
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -328,6 +334,7 @@ const additionalHintButton = {
   width: 100,
   height: 70,
   label: "추가 힌트",
+  imageSrc: buttonImagePath,
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -342,6 +349,7 @@ const gameOverButtons = [
     width: 160,
     height: 60,
     label: "다시 하기",
+    imageSrc: buttonImagePath,
     scale: 1,
     scaleSpeed: buttons[0].scaleSpeed,
     animationDurationMs: buttons[0].animationDurationMs,
@@ -355,6 +363,7 @@ const gameOverButtons = [
     width: 160,
     height: 60,
     label: "게임 종료",
+    imageSrc: buttonImagePath,
     scale: 1,
     scaleSpeed: buttons[0].scaleSpeed,
     animationDurationMs: buttons[0].animationDurationMs,
@@ -371,6 +380,7 @@ const levelClearButtons = [
     width: 160,
     height: 60,
     label: "다음 단계",
+    imageSrc: buttonImagePath,
     scale: 1,
     scaleSpeed: buttons[0].scaleSpeed,
     animationDurationMs: buttons[0].animationDurationMs,
@@ -384,6 +394,7 @@ const levelClearButtons = [
     width: 160,
     height: 60,
     label: "나가기",
+    imageSrc: buttonImagePath,
     scale: 1,
     scaleSpeed: buttons[0].scaleSpeed,
     animationDurationMs: buttons[0].animationDurationMs,
@@ -420,6 +431,7 @@ const hintChoiceButtons = [
   },
 ].map((button) => ({
   ...button,
+  imageSrc: buttonImagePath,
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -429,6 +441,7 @@ const hintChoiceButtons = [
 }));
 const hintPanelToggleButton = {
   radius: 14,
+  imageSrc: "",
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -441,6 +454,7 @@ const choiceCancelButton = {
   y: 520,
   width: 50,
   height: 50,
+  imageSrc: "",
   scale: 1,
   scaleSpeed: buttons[0].scaleSpeed,
   animationDurationMs: buttons[0].animationDurationMs,
@@ -1015,17 +1029,27 @@ function drawHintPanel() {
   // 화살표 버튼을 패널의 현재 오른쪽 가장자리 중앙에 그린다.
   const toggleButtonX = hintPanelX + hintPanelWidth;
   const toggleButtonY = hintPanelY + hintPanelHeight / 2;
-  ctx.save();
-  ctx.translate(toggleButtonX, toggleButtonY);
-  ctx.scale(hintPanelToggleButton.scale, hintPanelToggleButton.scale);
-  ctx.beginPath();
-  ctx.arc(0, 0, hintPanelToggleButton.radius, 0, Math.PI * 2);
-  ctx.fillStyle = "#8c806e";
-  ctx.fill();
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 18px sans-serif";
-  ctx.fillText(isHintPanelExpanded ? "<" : ">", 0, 0);
-  ctx.restore();
+  if (
+    !drawButtonImage(
+      hintPanelToggleButton,
+      toggleButtonX - hintPanelToggleButton.radius,
+      toggleButtonY - hintPanelToggleButton.radius,
+      hintPanelToggleButton.radius * 2,
+      hintPanelToggleButton.radius * 2,
+    )
+  ) {
+    ctx.save();
+    ctx.translate(toggleButtonX, toggleButtonY);
+    ctx.scale(hintPanelToggleButton.scale, hintPanelToggleButton.scale);
+    ctx.beginPath();
+    ctx.arc(0, 0, hintPanelToggleButton.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#8c806e";
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillText(isHintPanelExpanded ? "<" : ">", 0, 0);
+    ctx.restore();
+  }
 }
 
 // 캔버스 글꼴의 실제 폭을 기준으로 문자열을 표시 가능한 줄들로 나눈다.
@@ -1273,23 +1297,25 @@ function drawGameUI() {
     ctx.font = "bold 18px sans-serif";
     ctx.fillText("범인을 지목하세요", canvas.width / 2, 575);
 
-    ctx.save();
-    ctx.translate(
-      choiceCancelButton.x + choiceCancelButton.width / 2,
-      choiceCancelButton.y + choiceCancelButton.height / 2,
-    );
-    ctx.scale(choiceCancelButton.scale, choiceCancelButton.scale);
-    ctx.fillStyle = "#a65b5b";
-    ctx.fillRect(
-      -choiceCancelButton.width / 2,
-      -choiceCancelButton.height / 2,
-      choiceCancelButton.width,
-      choiceCancelButton.height,
-    );
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 28px sans-serif";
-    ctx.fillText("X", 0, 0);
-    ctx.restore();
+    if (!drawButtonImage(choiceCancelButton)) {
+      ctx.save();
+      ctx.translate(
+        choiceCancelButton.x + choiceCancelButton.width / 2,
+        choiceCancelButton.y + choiceCancelButton.height / 2,
+      );
+      ctx.scale(choiceCancelButton.scale, choiceCancelButton.scale);
+      ctx.fillStyle = "#a65b5b";
+      ctx.fillRect(
+        -choiceCancelButton.width / 2,
+        -choiceCancelButton.height / 2,
+        choiceCancelButton.width,
+        choiceCancelButton.height,
+      );
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 28px sans-serif";
+      ctx.fillText("X", 0, 0);
+      ctx.restore();
+    }
   }
 
   if (choiceResult) {
@@ -1316,34 +1342,77 @@ function hasFinalConsonant(word) {
   );
 }
 
-// 버튼 중심을 기준으로 확대해 둥근 사각형과 라벨을 함께 그린다.
+// 버튼 이미지를 배경으로 표시하고 라벨은 항상 그 위에 그린다.
 function drawRoundedButton(button) {
   const { x, y, width, height, label, scale } = button;
-  const radius = 10;
+  if (!drawButtonImage(button)) {
+    const radius = 10;
 
-  // 버튼 중심을 고정한 채 현재 배율로 확대해 그린다.
+    // 버튼 중심을 고정한 채 현재 배율로 확대해 그린다.
+    ctx.save();
+    ctx.translate(x + width / 2, y + height / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-(x + width / 2), -(y + height / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.translate(x + width / 2, y + height / 2);
   ctx.scale(scale, scale);
-  ctx.translate(-(x + width / 2), -(y + height / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-
-  ctx.fillStyle = "#fff";
-  ctx.fill();
   ctx.fillStyle = "#24202b";
   ctx.font = "16px sans-serif";
-  ctx.fillText(label, x + width / 2, y + height / 2);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 0, 0);
   ctx.restore();
+}
+
+// imageSrc 경로의 이미지를 버튼 크기에 맞춰 그린다.
+function drawButtonImage(
+  button,
+  x = button.x,
+  y = button.y,
+  width = button.width,
+  height = button.height,
+) {
+  if (!button.imageSrc) {
+    return false;
+  }
+
+  let image = buttonImageCache.get(button.imageSrc);
+  if (!image) {
+    image = new Image();
+    image.onerror = () => {
+      console.error(`버튼 이미지를 불러오지 못했습니다: ${button.imageSrc}`);
+    };
+    image.src = button.imageSrc;
+    buttonImageCache.set(button.imageSrc, image);
+  }
+
+  if (!image.complete || image.naturalWidth === 0) {
+    return false;
+  }
+
+  ctx.save();
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.scale(button.scale, button.scale);
+  ctx.drawImage(image, -width / 2, -height / 2, width, height);
+  ctx.restore();
+  return true;
 }
 
 // 클릭 좌표마다 반지름이 커지고 점차 투명해지는 원형 효과를 그린다.
