@@ -178,6 +178,8 @@ let hadWrongGuessThisLevel = false;
 let levelRewards = [];
 // 화면 입력과 렌더링 흐름을 구분하는 게임 상태 목록이다.
 const GameState = {
+  TITLE: "Title",
+  PLAY: "Play",
   GAME_WAITING: "GameWaiting",
   HINT_WAITING: "HintWaiting",
   PLAYING: "Playing",
@@ -186,7 +188,7 @@ const GameState = {
   GAME_OVER: "GameOver",
   EXITED: "Exited",
 };
-let gameState = GameState.GAME_WAITING;
+let gameState = GameState.TITLE;
 
 const clueColors = {
   motive: "#c62828",
@@ -307,6 +309,19 @@ const buttons = [
     isHovered: false,
   },
 ];
+const titleStartButton = {
+  x: 300,
+  y: 490,
+  width: 200,
+  height: 64,
+  label: "시작",
+  scale: 1,
+  scaleSpeed: buttons[0].scaleSpeed,
+  animationDurationMs: buttons[0].animationDurationMs,
+  animationElapsedMs: 0,
+  animationTargetScale: 1,
+  isHovered: false,
+};
 const additionalHintButton = {
   x: 410,
   y: 500,
@@ -483,7 +498,7 @@ function startNewGame() {
   choiceResult = "";
   choiceResultElapsedMs = 0;
   hintClues = [];
-  gameState = GameState.GAME_WAITING;
+  gameState = GameState.PLAY;
   for (const button of gameOverButtons) {
     button.isHovered = false;
     button.scale = 1;
@@ -542,7 +557,7 @@ function chooseStartingHint(category) {
     throw new Error(`선택한 종류의 힌트를 찾을 수 없습니다: ${category}`);
   }
 
-  if (gameState === GameState.GAME_WAITING) {
+  if (gameState === GameState.GAME_WAITING || gameState === GameState.PLAY) {
     hintClues = [createHintClue(target)];
   } else if (gameState === GameState.HINT_WAITING) {
     hintClues.push(createHintClue(target));
@@ -689,6 +704,13 @@ canvas.addEventListener("click", (event) => {
   const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
   const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
+  if (gameState === GameState.TITLE) {
+    if (isPointInsideButton(mouseX, mouseY, titleStartButton)) {
+      startNewGame();
+    }
+    return;
+  }
+
   if (
     gameState === GameState.PLAYING ||
     gameState === GameState.CHOICE
@@ -703,6 +725,7 @@ canvas.addEventListener("click", (event) => {
   // 플레이 중에는 시작/추가 힌트 선택 화면을 열 수 있다.
   if (
     gameState === GameState.GAME_WAITING ||
+    gameState === GameState.PLAY ||
     gameState === GameState.HINT_WAITING
   ) {
     const selectedButton = getAvailableHintChoiceButtons().find((button) =>
@@ -817,6 +840,9 @@ canvas.addEventListener("mousemove", (event) => {
       gameState === GameState.PLAYING &&
       isPointInsideButton(mouseX, mouseY, button);
   }
+  titleStartButton.isHovered =
+    gameState === GameState.TITLE &&
+    isPointInsideButton(mouseX, mouseY, titleStartButton);
   additionalHintButton.isHovered =
     gameState === GameState.PLAYING &&
     remainingAdditionalHints > 0 &&
@@ -834,6 +860,7 @@ canvas.addEventListener("mousemove", (event) => {
   for (const button of hintChoiceButtons) {
     button.isHovered =
       (gameState === GameState.GAME_WAITING ||
+        gameState === GameState.PLAY ||
         gameState === GameState.HINT_WAITING) &&
       getAvailableHintChoiceButtons().includes(button) &&
       isPointInsideButton(mouseX, mouseY, button);
@@ -858,6 +885,7 @@ canvas.addEventListener("mousemove", (event) => {
 
 // 캔버스를 벗어나면 확대 상태를 해제해 버튼 크기를 원래대로 돌린다.
 canvas.addEventListener("mouseleave", () => {
+  titleStartButton.isHovered = false;
   for (const button of buttons) {
     button.isHovered = false;
   }
@@ -1065,6 +1093,16 @@ function drawGameUI() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
+  if (gameState === GameState.TITLE) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#f5e7b2";
+    ctx.font = "bold 58px sans-serif";
+    ctx.fillText("다잉메세지", canvas.width / 2, 185);
+    drawRoundedButton(titleStartButton);
+    return;
+  }
+
   // 종료, 클리어, 힌트 선택 상태는 각각 별도 화면으로 표시한다.
   if (gameState === GameState.EXITED) {
     ctx.fillStyle = "#101827";
@@ -1094,6 +1132,7 @@ function drawGameUI() {
 
   if (
     gameState === GameState.GAME_WAITING ||
+    gameState === GameState.PLAY ||
     gameState === GameState.HINT_WAITING
   ) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
@@ -1101,7 +1140,7 @@ function drawGameUI() {
     ctx.fillStyle = "#fff";
     ctx.font = "bold 30px sans-serif";
     ctx.fillText(
-      gameState === GameState.GAME_WAITING
+      gameState === GameState.GAME_WAITING || gameState === GameState.PLAY
         ? "시작 힌트를 선택하세요"
         : "추가로 받을 힌트를 선택하세요",
       canvas.width / 2,
@@ -1351,6 +1390,7 @@ function gameLoop(frameTime) {
 
   for (const button of [
     ...buttons,
+    titleStartButton,
     additionalHintButton,
     ...gameOverButtons,
     ...levelClearButtons,
