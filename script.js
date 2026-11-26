@@ -15,6 +15,7 @@ const hintPanelExpandedWidth = hintPanelCollapsedWidth * 1.5;
 const hintPanelExpandSpeed = 0.6;
 let hintPanelWidth = hintPanelCollapsedWidth;
 let isHintPanelExpanded = false;
+let isHintPanelVisible = false;
 
 // 게임에서 사용할 동기, 장소, 물건 종류를 관리한다.
 const attributeCategories = {
@@ -322,6 +323,8 @@ const resourcesImagePath = "images/ui/resources.png";
 // 힌트 패널과 개별 힌트 카드 이미지 경로는 index.html 기준 상대 경로다.
 const hintListImagePath = "images/ui/hintList.png";
 const hintImagePath = "images/ui/hint.png";
+// 힌트 목록 표시 버튼 경로는 index.html 기준 상대 경로다.
+const clipboardImagePath = "images/ui/clipboard.png";
 // 용의자 말풍선 이미지 경로는 index.html 기준 상대 경로다.
 const suspectTextBoxImagePath = "images/ui/textbox.png";
 // 캐릭터 이미지 경로는 index.html 기준 상대 경로다.
@@ -341,7 +344,7 @@ const suspectCharacterWidth = suspectCharacterHeight * (1199 / 1312);
 const backgroundImagePath = "images/background/background.png";
 // 데스크 이미지는 화면 중앙에 두고, 용의자의 몸통 앞에 표시한다.
 const deskImagePath = "images/background/desk.png";
-const deskImageWidth = canvas.width;
+const deskImageWidth = canvas.width * 0.8;
 const deskImageHeight = deskImageWidth * (724 / 2172);
 const deskImageY = 300;
 const imageCache = new Map();
@@ -504,6 +507,20 @@ const hintPanelToggleButton = {
   animationTargetScale: 1,
   isHovered: false,
 };
+const hintListButton = {
+  x: 217.5,
+  y: 301,
+  width: 90,
+  height: 60,
+  label: "",
+  imageSrc: clipboardImagePath,
+  scale: 1,
+  scaleSpeed: buttons[0].scaleSpeed,
+  animationDurationMs: buttons[0].animationDurationMs,
+  animationElapsedMs: 0,
+  animationTargetScale: 1,
+  isHovered: false,
+};
 const choiceCancelButton = {
   x: 730,
   y: 520,
@@ -573,6 +590,8 @@ function startNewGame() {
   choiceResult = "";
   choiceResultElapsedMs = 0;
   hintClues = [];
+  isHintPanelVisible = false;
+  isHintPanelExpanded = false;
   gameState = GameState.PLAY;
   for (const button of gameOverButtons) {
     button.isHovered = false;
@@ -602,6 +621,8 @@ function startNextLevel() {
   choiceResult = "";
   choiceResultElapsedMs = 0;
   hintClues = [];
+  isHintPanelVisible = false;
+  isHintPanelExpanded = false;
   gameState = GameState.GAME_WAITING;
 
   for (const button of levelClearButtons) {
@@ -797,6 +818,17 @@ canvas.addEventListener("click", (event) => {
     });
   }
 
+  if (
+    (gameState === GameState.PLAYING || gameState === GameState.CHOICE) &&
+    isPointInsideButton(mouseX, mouseY, hintListButton)
+  ) {
+    isHintPanelVisible = !isHintPanelVisible;
+    if (!isHintPanelVisible) {
+      isHintPanelExpanded = false;
+    }
+    return;
+  }
+
   // 플레이 중에는 시작/추가 힌트 선택 화면을 열 수 있다.
   if (
     gameState === GameState.GAME_WAITING ||
@@ -811,15 +843,17 @@ canvas.addEventListener("click", (event) => {
     }
   } else if (gameState === GameState.PLAYING || gameState === GameState.CHOICE) {
     // 패널 오른쪽 가장자리의 화살표 버튼을 누르면 펼침 상태를 전환한다.
-    const toggleButtonX = hintPanelX + hintPanelWidth;
-    const toggleButtonY = hintPanelY + hintPanelHeight / 2;
-    const distanceX = mouseX - toggleButtonX;
-    const distanceY = mouseY - toggleButtonY;
-    if (
-      distanceX ** 2 + distanceY ** 2 <=
-      (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2
-    ) {
-      isHintPanelExpanded = !isHintPanelExpanded;
+    if (isHintPanelVisible) {
+      const toggleButtonX = hintPanelX + hintPanelWidth;
+      const toggleButtonY = hintPanelY + hintPanelHeight / 2;
+      const distanceX = mouseX - toggleButtonX;
+      const distanceY = mouseY - toggleButtonY;
+      if (
+        distanceX ** 2 + distanceY ** 2 <=
+        (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2
+      ) {
+        isHintPanelExpanded = !isHintPanelExpanded;
+      }
     }
   }
 
@@ -946,8 +980,13 @@ canvas.addEventListener("mousemove", (event) => {
   const toggleDistanceX = mouseX - toggleButtonX;
   const toggleDistanceY = mouseY - toggleButtonY;
   hintPanelToggleButton.isHovered =
+    isHintPanelVisible &&
+    (gameState === GameState.PLAYING || gameState === GameState.CHOICE) &&
     toggleDistanceX ** 2 + toggleDistanceY ** 2 <=
-    (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2;
+      (hintPanelToggleButton.radius * hintPanelToggleButton.scale) ** 2;
+  hintListButton.isHovered =
+    (gameState === GameState.PLAYING || gameState === GameState.CHOICE) &&
+    isPointInsideButton(mouseX, mouseY, hintListButton);
   choiceCancelButton.isHovered =
     gameState === GameState.CHOICE &&
     isPointInsideButton(mouseX, mouseY, choiceCancelButton);
@@ -975,6 +1014,7 @@ canvas.addEventListener("mouseleave", () => {
     button.isHovered = false;
   }
   hintPanelToggleButton.isHovered = false;
+  hintListButton.isHovered = false;
   choiceCancelButton.isHovered = false;
   for (const suspect of suspects) {
     suspect.isHovered = false;
@@ -1340,7 +1380,7 @@ function drawGameUI() {
 
   drawImageCover(
     deskImagePath,
-    canvas.width - deskImageWidth,
+    (canvas.width - deskImageWidth) / 2,
     deskImageY,
     deskImageWidth,
     deskImageHeight,
@@ -1569,6 +1609,7 @@ function gameLoop(frameTime) {
     ...levelClearButtons,
     ...hintChoiceButtons,
     hintPanelToggleButton,
+    hintListButton,
     choiceCancelButton,
   ]) {
     const targetScale = button.isHovered ? buttonHoverScale : 1;
@@ -1618,7 +1659,7 @@ function gameLoop(frameTime) {
     }
   }
 
-  // 배경과 다른 UI를 그린 뒤 힌트 패널을 마지막에 그려 항상 위에 표시한다.
+  // 배경과 게임 UI를 그린 뒤, 표시 중인 힌트 패널과 클립보드 버튼을 그린다.
   drawBackground();
   drawGameUI();
   if (gameState === GameState.EXITED) {
@@ -1629,7 +1670,10 @@ function gameLoop(frameTime) {
     gameState === GameState.CHOICE
   ) {
     drawClickRipples();
-    drawHintPanel();
+    if (isHintPanelVisible) {
+      drawHintPanel();
+    }
+    drawRoundedButton(hintListButton);
   }
 
   requestAnimationFrame(gameLoop);
