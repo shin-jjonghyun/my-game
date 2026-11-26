@@ -153,12 +153,48 @@ const itemTypes = [
   "트로피",
   "책",
 ].map(categorizeAttribute);
-// 게임 중 표시할 네 용의자의 위치, 색상, 배정 속성, hover 상태를 저장한다.
+// 게임 중 표시할 네 용의자의 위치, 이미지, 배정 속성, hover 상태를 저장한다.
 const suspects = [
-  { x: 270, color: "#5b83a6", motive: "", location: "", item: "", isHovered: false },
-  { x: 410, color: "#a65b5b", motive: "", location: "", item: "", isHovered: false },
-  { x: 550, color: "#6b8c65", motive: "", location: "", item: "", isHovered: false },
-  { x: 690, color: "#8a6b9b", motive: "", location: "", item: "", isHovered: false },
+  {
+    x: 270,
+    color: "#5b83a6",
+    motive: "",
+    location: "",
+    item: "",
+    characterImage: { imageSrc: "", scale: 1 },
+    isFlipped: false,
+    isHovered: false,
+  },
+  {
+    x: 410,
+    color: "#a65b5b",
+    motive: "",
+    location: "",
+    item: "",
+    characterImage: { imageSrc: "", scale: 1 },
+    isFlipped: false,
+    isHovered: false,
+  },
+  {
+    x: 550,
+    color: "#6b8c65",
+    motive: "",
+    location: "",
+    item: "",
+    characterImage: { imageSrc: "", scale: 1 },
+    isFlipped: false,
+    isHovered: false,
+  },
+  {
+    x: 690,
+    color: "#8a6b9b",
+    motive: "",
+    location: "",
+    item: "",
+    characterImage: { imageSrc: "", scale: 1 },
+    isFlipped: false,
+    isHovered: false,
+  },
 ];
 let culpritSuspect = null;
 let wrongGuessSuspects = [];
@@ -307,11 +343,30 @@ const resourcesImagePath = "images/ui/resources.png";
 // 힌트 패널과 개별 힌트 카드 이미지 경로는 index.html 기준 상대 경로다.
 const hintListImagePath = "images/ui/hintList.png";
 const hintImagePath = "images/ui/hint.png";
+// 용의자 말풍선 이미지 경로는 index.html 기준 상대 경로다.
+const suspectTextBoxImagePath = "images/ui/textbox.png";
+// 캐릭터 이미지 경로는 index.html 기준 상대 경로다.
+const suspectCharacterImagePaths = [
+  "images/character/characeter_1.png",
+  "images/character/character_2.png",
+  "images/character/character_3.png",
+  "images/character/character_4.png",
+  "images/character/character_5.png",
+  "images/character/character_6.png",
+  "images/character/character_7.png",
+  "images/character/character_8.png",
+];
+const suspectCharacterHeight = 130;
+const suspectCharacterWidth = suspectCharacterHeight * (1199 / 1312);
 const buttonImageCache = new Map();
 const levelUiImage = { imageSrc: levelImagePath, scale: 1 };
 const resourcesUiImage = { imageSrc: resourcesImagePath, scale: 1 };
 const hintListUiImage = { imageSrc: hintListImagePath, scale: 1 };
 const hintUiImage = { imageSrc: hintImagePath, scale: 1 };
+const suspectTextBoxUiImage = {
+  imageSrc: suspectTextBoxImagePath,
+  scale: 1,
+};
 const buttons = [
   {
     x: 290,
@@ -496,11 +551,17 @@ function initializeGame() {
   const assignedMotives = assignRelatedAttributes(motiveTypes);
   const assignedLocations = assignRelatedAttributes(locationTypes);
   const assignedItems = assignRelatedAttributes(itemTypes);
+  const assignedCharacterImages = shuffle(suspectCharacterImagePaths).slice(
+    0,
+    suspects.length,
+  );
 
   for (let i = 0; i < suspects.length; i += 1) {
     suspects[i].motive = assignedMotives[i];
     suspects[i].location = assignedLocations[i];
     suspects[i].item = assignedItems[i];
+    suspects[i].characterImage.imageSrc = assignedCharacterImages[i];
+    suspects[i].isFlipped = Math.random() < 0.5;
   }
 
   // 게임마다 용의자 한 명을 범인으로 지정해 내부 변수에만 보관한다.
@@ -967,18 +1028,14 @@ function isPointInsideButton(x, y, button) {
   );
 }
 
-// 클릭 좌표가 용의자 머리 또는 몸통 위에 있는지 판정한다.
+// 클릭 좌표가 용의자 캐릭터 이미지 영역 안에 있는지 판정한다.
 function isPointOverSuspect(x, y, suspect) {
-  const headDistanceX = x - suspect.x;
-  const headDistanceY = y - 270;
-  const isOverHead = headDistanceX ** 2 + headDistanceY ** 2 <= 25 ** 2;
-  const isOverBody =
-    x >= suspect.x - 15 &&
-    x <= suspect.x + 15 &&
-    y >= 300 &&
-    y <= 350;
-
-  return isOverHead || isOverBody;
+  return (
+    x >= suspect.x - suspectCharacterWidth / 2 &&
+    x <= suspect.x + suspectCharacterWidth / 2 &&
+    y >= 220 &&
+    y <= 220 + suspectCharacterHeight
+  );
 }
 
 function drawHintPanel() {
@@ -1232,15 +1289,52 @@ function drawGameUI() {
     const centerX = suspect.x;
     const bubbleX = centerX - 65;
     const bubbleY = 145;
+    const characterY = 220;
+    const hasCharacterImage = drawButtonImage(
+      suspect.characterImage,
+      centerX - suspectCharacterWidth / 2,
+      characterY,
+      suspectCharacterWidth,
+      suspectCharacterHeight,
+      suspect.isFlipped,
+    );
 
-    ctx.beginPath();
-    ctx.roundRect(bubbleX, bubbleY, 130, 100, 10);
-    ctx.fillStyle = "#fff";
-    ctx.fill();
-    ctx.fillStyle = "#24202b";
-    ctx.font = "bold 12px sans-serif";
-    ctx.fillText(`용의자 ${i + 1}`, centerX, bubbleY + 14);
+    if (hasCharacterImage) {
+      if (gameState === GameState.CHOICE && suspect.isHovered) {
+        ctx.strokeStyle = "#ff0000";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+          centerX - suspectCharacterWidth / 2,
+          characterY,
+          suspectCharacterWidth,
+          suspectCharacterHeight,
+        );
+      }
+    } else {
+      ctx.fillStyle = "#e7bd99";
+      ctx.beginPath();
+      ctx.arc(centerX, 270, 25, 0, Math.PI * 2);
+      ctx.fill();
+      if (gameState === GameState.CHOICE && suspect.isHovered) {
+        ctx.strokeStyle = "#ff0000";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.fillStyle = suspect.color;
+      ctx.fillRect(centerX - 15, 300, 30, 50);
+      if (gameState === GameState.CHOICE && suspect.isHovered) {
+        ctx.strokeStyle = "#ff0000";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(centerX - 15, 300, 30, 50);
+      }
+    }
 
+    if (!drawButtonImage(suspectTextBoxUiImage, bubbleX, bubbleY, 130, 100)) {
+      ctx.beginPath();
+      ctx.roundRect(bubbleX, bubbleY, 130, 100, 10);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+    }
     // 배정된 장소, 물건, 동기를 엮어 각 용의자의 알리바이로 표시한다.
     const itemParticle = hasFinalConsonant(suspect.item) ? "을" : "를";
     ctx.font = "10px sans-serif";
@@ -1266,28 +1360,11 @@ function drawGameUI() {
       for (const segment of line) {
         ctx.fillStyle = segment.color || "#24202b";
         ctx.textAlign = "left";
-        ctx.fillText(segment.text, textX, bubbleY + 34 + lineIndex * 12);
+        ctx.fillText(segment.text, textX, bubbleY + 19 + lineIndex * 12);
         textX += ctx.measureText(segment.text).width;
       }
     }
     ctx.textAlign = "center";
-
-    ctx.fillStyle = "#e7bd99";
-    ctx.beginPath();
-    ctx.arc(centerX, 270, 25, 0, Math.PI * 2);
-    ctx.fill();
-    if (gameState === GameState.CHOICE && suspect.isHovered) {
-      ctx.strokeStyle = "#ff0000";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    }
-    ctx.fillStyle = suspect.color;
-    ctx.fillRect(centerX - 15, 300, 30, 50);
-    if (gameState === GameState.CHOICE && suspect.isHovered) {
-      ctx.strokeStyle = "#ff0000";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(centerX - 15, 300, 30, 50);
-    }
   }
 
   if (gameState === GameState.GAME_OVER) {
