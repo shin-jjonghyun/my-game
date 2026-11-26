@@ -342,9 +342,9 @@ const suspectCharacterHeight = 130;
 const suspectCharacterWidth = suspectCharacterHeight * (1199 / 1312);
 // 배경 이미지 경로는 index.html 기준 상대 경로다.
 const backgroundImagePath = "images/background/background.png";
-// 데스크 이미지는 화면 중앙에 두고, 용의자의 몸통 앞에 표시한다.
+// 데스크를 확대해 아래로 내려 윗면만 화면 하단에 표시한다.
 const deskImagePath = "images/background/desk.png";
-const deskImageWidth = canvas.width * 0.8;
+const deskImageWidth = canvas.width * 2;
 const deskImageHeight = deskImageWidth * (724 / 2172);
 const deskImageY = 300;
 const imageCache = new Map();
@@ -508,8 +508,8 @@ const hintPanelToggleButton = {
   isHovered: false,
 };
 const hintListButton = {
-  x: 217.5,
-  y: 301,
+  x: 30,
+  y: 305,
   width: 90,
   height: 60,
   label: "",
