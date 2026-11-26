@@ -16,27 +16,6 @@ const hintPanelExpandSpeed = 0.6;
 let hintPanelWidth = hintPanelCollapsedWidth;
 let isHintPanelExpanded = false;
 
-// 달과 별의 위치, 크기, 이동 속도를 한곳에서 관리한다.
-const skyHeight = 450;
-const moon = {
-  x: 0,
-  y: 95,
-  radius: 22,
-  speed: 0.1,
-};
-const stars = [
-  { x: 70, y: 40, radius: 1.5, speed: 0.35 },
-  { x: 180, y: 110, radius: 2, speed: 0.5 },
-  { x: 270, y: 55, radius: 1, speed: 0.25 },
-  { x: 340, y: 130, radius: 1.5, speed: 0.45 },
-  { x: 490, y: 35, radius: 2, speed: 0.3 },
-  { x: 570, y: 150, radius: 1, speed: 0.6 },
-  { x: 740, y: 75, radius: 1.5, speed: 0.4 },
-  { x: 125, y: 230, radius: 1, speed: 0.55 },
-  { x: 300, y: 300, radius: 1.5, speed: 0.3 },
-  { x: 530, y: 250, radius: 1, speed: 0.5 },
-  { x: 760, y: 350, radius: 2, speed: 0.35 },
-];
 // 게임에서 사용할 동기, 장소, 물건 종류를 관리한다.
 const attributeCategories = {
   복수: ["쓰라린", "격렬한"],
@@ -358,7 +337,14 @@ const suspectCharacterImagePaths = [
 ];
 const suspectCharacterHeight = 130;
 const suspectCharacterWidth = suspectCharacterHeight * (1199 / 1312);
-const buttonImageCache = new Map();
+// 배경 이미지 경로는 index.html 기준 상대 경로다.
+const backgroundImagePath = "images/background/background.png";
+// 데스크 이미지는 화면 중앙에 두고, 용의자의 몸통 앞에 표시한다.
+const deskImagePath = "images/background/desk.png";
+const deskImageWidth = canvas.width;
+const deskImageHeight = deskImageWidth * (724 / 2172);
+const deskImageY = 300;
+const imageCache = new Map();
 const levelUiImage = { imageSrc: levelImagePath, scale: 1 };
 const resourcesUiImage = { imageSrc: resourcesImagePath, scale: 1 };
 const hintListUiImage = { imageSrc: hintListImagePath, scale: 1 };
@@ -996,24 +982,9 @@ canvas.addEventListener("mouseleave", () => {
 });
 
 function drawBackground() {
-  // 밤하늘과 아래쪽 지면을 칠한다.
-  ctx.fillStyle = "#14233f";
-  ctx.fillRect(0, 0, canvas.width, skyHeight);
-  ctx.fillStyle = "#302044";
-  ctx.fillRect(0, skyHeight, canvas.width, canvas.height - skyHeight);
-
-  // 배경 천체를 먼저 그려 UI와 게임 오브젝트가 앞에 보이게 한다.
-  ctx.fillStyle = "#f5e7b2";
-  ctx.beginPath();
-  ctx.arc(moon.x, moon.y, moon.radius, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#fff";
-  for (const star of stars) {
-    ctx.beginPath();
-    ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.fillStyle = "#211b1d";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawImageCover(backgroundImagePath, 0, 0, canvas.width, canvas.height);
 }
 
 // 마우스 좌표가 현재 확대 비율을 반영한 버튼 영역 안에 있는지 판정한다.
@@ -1034,7 +1005,7 @@ function isPointOverSuspect(x, y, suspect) {
     x >= suspect.x - suspectCharacterWidth / 2 &&
     x <= suspect.x + suspectCharacterWidth / 2 &&
     y >= 220 &&
-    y <= 220 + suspectCharacterHeight
+    y <= Math.min(220 + suspectCharacterHeight, deskImageY)
   );
 }
 
@@ -1367,6 +1338,14 @@ function drawGameUI() {
     ctx.textAlign = "center";
   }
 
+  drawImageCover(
+    deskImagePath,
+    canvas.width - deskImageWidth,
+    deskImageY,
+    deskImageWidth,
+    deskImageHeight,
+  );
+
   if (gameState === GameState.GAME_OVER) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1488,16 +1467,7 @@ function drawButtonImage(
     return false;
   }
 
-  let image = buttonImageCache.get(button.imageSrc);
-  if (!image) {
-    image = new Image();
-    image.onerror = () => {
-      console.error(`버튼 이미지를 불러오지 못했습니다: ${button.imageSrc}`);
-    };
-    image.src = button.imageSrc;
-    buttonImageCache.set(button.imageSrc, image);
-  }
-
+  const image = getCachedImage(button.imageSrc);
   if (!image.complete || image.naturalWidth === 0) {
     return false;
   }
@@ -1511,6 +1481,54 @@ function drawButtonImage(
   ctx.drawImage(image, -width / 2, -height / 2, width, height);
   ctx.restore();
   return true;
+}
+
+function drawImageCover(imageSource, x, y, width, height) {
+  const image = getCachedImage(imageSource);
+  if (!image.complete || image.naturalWidth === 0) {
+    return false;
+  }
+
+  const targetAspectRatio = width / height;
+  const imageAspectRatio = image.naturalWidth / image.naturalHeight;
+  let sourceX = 0;
+  let sourceY = 0;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
+
+  if (imageAspectRatio > targetAspectRatio) {
+    sourceWidth = image.naturalHeight * targetAspectRatio;
+    sourceX = (image.naturalWidth - sourceWidth) / 2;
+  } else {
+    sourceHeight = image.naturalWidth / targetAspectRatio;
+    sourceY = (image.naturalHeight - sourceHeight) / 2;
+  }
+
+  ctx.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    x,
+    y,
+    width,
+    height,
+  );
+  return true;
+}
+
+function getCachedImage(imageSrc) {
+  let image = imageCache.get(imageSrc);
+  if (!image) {
+    image = new Image();
+    image.onerror = () => {
+      console.error(`이미지를 불러오지 못했습니다: ${imageSrc}`);
+    };
+    image.src = imageSrc;
+    imageCache.set(imageSrc, image);
+  }
+  return image;
 }
 
 // 클릭 좌표마다 반지름이 커지고 점차 투명해지는 원형 효과를 그린다.
@@ -1542,19 +1560,7 @@ function gameLoop(frameTime) {
   // 지우기: 이전 프레임을 지운다.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 계산: 달과 별을 움직이고, 버튼은 마우스 상태에 맞춰 크기를 바꾼다.
-  moon.x += moon.speed;
-  if (moon.x - moon.radius > canvas.width) {
-    moon.x = -moon.radius;
-  }
-
-  for (const star of stars) {
-    star.y += star.speed;
-    if (star.y - star.radius > skyHeight) {
-      star.y = -star.radius;
-    }
-  }
-
+  // 버튼은 마우스 상태에 맞춰 크기를 바꾼다.
   for (const button of [
     ...buttons,
     titleStartButton,
